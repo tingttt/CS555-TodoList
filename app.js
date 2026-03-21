@@ -1,5 +1,4 @@
 // ========== 1️⃣ Initialize ==========
-console.log("new change for PR");
 const taskInput = document.getElementById("taskInput");
 const taskList = document.getElementById("taskList");
 const emptyState = document.getElementById("emptyState");
