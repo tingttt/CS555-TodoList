@@ -102,6 +102,10 @@ const Tasks = () => {
     );
   };
 
+  const completionPercentage = todos.length === 0 ? 0 : Math.round(
+    (todos.filter((todo) => todo.completed).length / todos.length) * 100
+  );
+
   const addTodo = (newTodo) => {
     const todoWithId = { id: nextId, ...newTodo };
     setTodos([...todos, todoWithId]);
@@ -140,6 +144,23 @@ const Tasks = () => {
   return (
     <div>
       <h1>Task Page</h1>
+      <div style={{ marginBottom: "16px" }}>
+        <p>Overall Completion: {completionPercentage}%</p>
+        <div style={{
+          background: "#e0e0e0",
+          borderRadius: "8px",
+          height: "12px",
+          width: "100%"
+        }}>
+          <div style={{
+            background: completionPercentage === 100 ? "#28a745" : "#667eea",
+            width: `${completionPercentage}%`,
+            height: "100%",
+            borderRadius: "8px",
+            transition: "width 0.3s ease"
+          }} />
+        </div>
+      </div>
       <AddTodo addTodo={addTodo} />
       <div className="lists-container">
         <TodoList
