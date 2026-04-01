@@ -13,7 +13,7 @@ const AddTodo = ({ addTodo }) => {
   const [priority, setPriority] = useState("low");
   const [category, setCategory] = useState("");
   const [error, setError] = useState("");
-
+  const [assignedTo, setAssignedTo] = useState("");
 
 
   const handleSubmit = (e) => {
@@ -49,9 +49,11 @@ const AddTodo = ({ addTodo }) => {
         due: validatedDate,
         priority: priority,
         category: category,
+        assignedTo: assignedTo, 
         completed: false,
       };
-
+      
+      console.log("newTodo:", newTodo);
       addTodo(newTodo);
 
       // Reset form input after successful submission and ad new todo
@@ -61,9 +63,12 @@ const AddTodo = ({ addTodo }) => {
       setPriority("low");
       setCategory("");
       setError("");
+      setAssignedTo("");
     } catch (err) {
       setError(err.message);
     }
+
+    
   };
 
   return (
@@ -127,6 +132,16 @@ const AddTodo = ({ addTodo }) => {
             <option value="finance">Finance</option>
             <option value="learn">Learning</option>
           </select>
+        </div>
+
+        <div>
+          <label>Assign To: </label>
+          <input
+            type="text"
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+            placeholder="Enter name..."
+          />
         </div>
 
         <button type="submit">Add Todo</button>

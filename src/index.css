@@ -76,3 +76,38 @@ form div {
 .todo .red {
   color: red;
 }
+
+/* Dark mode */
+.dark-mode {
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+}
+
+.dark-mode .todoList,
+.dark-mode .completedTodos {
+  background-color: #16213e;
+  color: #e0e0e0;
+}
+
+.dark-mode .todo {
+  background-color: #0f3460;
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+.dark-mode .todo p {
+  color: #ccc;
+}
+
+.dark-mode form {
+  background-color: #16213e;
+  color: #e0e0e0;
+}
+
+.dark-mode input,
+.dark-mode textarea,
+.dark-mode select {
+  background-color: #0f3460;
+  color: #e0e0e0;
+  border-color: #555;
+}
