@@ -1,6 +1,7 @@
 import React from "react";
 import validation from "../utils/validation";
-const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask }) => {
+const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy }) => {
+
 
 const isPastDue = (due) => {
   try {
@@ -16,9 +17,9 @@ const isPastDue = (due) => {
     duedate.setHours(0, 0, 0, 0);
 
     // 3. Return Bootstrap-friendly names or hex codes
-    return duedate < today ? "text-danger" : "text-dark";
+    return duedate < today;
   } catch (e) {
-    return "text-dark"; // Default if date is empty/invalid
+    return false; // Default if date is empty/invalid
   }
 };
 
@@ -50,31 +51,44 @@ const isPastDue = (due) => {
   return (
     <div className="todoList">
       <h2>Todo List</h2>
+      <div style={{ marginBottom: "12px" }}>
+        <label htmlFor="sort">Sort by: </label>
+        <select
+          id="sort"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="none">None</option>
+          <option value="due-asc">Due Date (Earliest First)</option>
+          <option value="due-desc">Due Date (Latest First)</option>
+          <option value="priority">Priority (High to Low)</option>
+          <option value="title">Title (A-Z)</option>
+        </select>
+      </div>
       {todos
         .filter((todo) => !todo.completed) //filter only not completed todos
-        .map(
-          (
-            todo //iterate through each todo to display
-          ) => (
-            <div key={todo.id} className="todo">
-              <h1 className={isPastDue(todo.due)}>
-                {formatAndValidateTitle(todo.title)}
-              </h1>
+        .map((todo) => {
+          const overdue = isPastDue(todo.due);
+          return (
+            <div key={todo.id} className={`todo ${overdue ? "todo--overdue" : ""}`}>
+              <h1>{formatAndValidateTitle(todo.title)}</h1>
               <p>{formatAndValidateDescription(todo.description)}</p>
-              <p className={isPastDue(todo.due)}>
-                Due Date: {formatAndValidateDate(todo.due)}
+              <p>
+                <span className={`due-date-badge ${overdue ? "due-date-badge--overdue" : ""}`}>
+                  {overdue ? "⚠ Overdue: " : "Due: "}
+                  {formatAndValidateDate(todo.due)}
+                </span>
               </p>
-              <p>Priority: {todo.priority}</p>
-              <p>Category: {todo.category}</p>
+              {todo.priority && <p>Priority: {todo.priority}</p>}
+              {todo.category && <p>Category: {todo.category}</p>}
               <p>Completed: No</p>
-              <button
-                className="deletebutton"
-                onClick={() => deleteTodo(todo.id)}>Delete</button>
+              <button className="deletebutton" onClick={() => deleteTodo(todo.id)}>Delete</button>
               <button onClick={() => toggleCompleted(todo)}>Complete</button>
               <button onClick={() => editTask(todo)}>Edit</button>
             </div>
-          )
-        )}
+          );
+        })
+        }
     </div>
   );
 };

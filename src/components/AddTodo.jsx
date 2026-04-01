@@ -34,7 +34,9 @@ const AddTodo = ({ addTodo }) => {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const dueDate = new Date(validatedDate);
+      const [m, d, y] = validatedDate.split("/").map(Number);
+      const dueDate = new Date(y, m - 1, d);
+      dueDate.setHours(0, 0, 0, 0);
 
       if (dueDate < today) {
         throw new Error("Due date must be today or in the future.");

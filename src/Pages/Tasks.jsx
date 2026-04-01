@@ -83,6 +83,8 @@ const Tasks = () => {
 
   const [nextId, setNextId] = useState(hardcodedBuyApple.length + 1); // Start from 11 for add toDOs
 
+  const [sortBy, setSortBy] = useState("none");
+
   const deleteTodo = (id) => {
     setTodos(todos.filter((todo) => todo.id !== id));
     // keep all ids except the one to delete, so that todos without that id remains
@@ -99,26 +101,52 @@ const Tasks = () => {
   };
 
   const addTodo = (newTodo) => {
-    const todoWithId = {
-      id: nextId,
-      ...newTodo, //add id to the new todo
-    };
+    const todoWithId = { id: nextId, ...newTodo };
+    setTodos([...todos, todoWithId]);
+    setNextId(nextId + 1);
+  };
 
-    setTodos([...todos, todoWithId]); // add new todo to existing todos
-    setNextId(nextId + 1); // increment nextId for future todos
+  const getSortedTodos = () => {
+    const priorityOrder = { high: 1, medium: 2, low: 3 };
+    const sorted = [...todos];
+
+    if (sortBy === "due-asc") {
+      sorted.sort((a, b) => {
+        const [am, ad, ay] = a.due.split("/").map(Number);
+        const [bm, bd, by] = b.due.split("/").map(Number);
+        return new Date(ay, am - 1, ad) - new Date(by, bm - 1, bd);
+      });
+    } else if (sortBy === "due-desc") {
+      sorted.sort((a, b) => {
+        const [am, ad, ay] = a.due.split("/").map(Number);
+        const [bm, bd, by] = b.due.split("/").map(Number);
+        return new Date(by, bm - 1, bd) - new Date(ay, am - 1, ad);
+      });
+    } else if (sortBy === "priority") {
+      sorted.sort(
+        (a, b) =>
+          (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99)
+      );
+    } else if (sortBy === "title") {
+      sorted.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    return sorted;
+
   };
 
   return (
     <div>
       <h1>Task Page</h1>
-
       <AddTodo addTodo={addTodo} />
       <div className="lists-container">
         <TodoList
-          todos={todos}
+          todos={getSortedTodos()}
           deleteTodo={deleteTodo}
           toggleCompleted={toggleCompleted}
-          editTask={() => {}}   // add this line
+          editTask={() => {}}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
         />
 
         <CompletedTodos todos={todos} toggleCompleted={toggleCompleted} />
