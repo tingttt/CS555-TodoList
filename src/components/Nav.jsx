@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 
-function AppNavbar() {
+function AppNavbar({ darkMode, setDarkMode }) {
   return (
     <Navbar bg="dark" variant="dark" expand="lg">
       <Container>
@@ -14,10 +14,15 @@ function AppNavbar() {
             <Nav.Link as={NavLink} to="/calendar" end>Calendar</Nav.Link>
             <Nav.Link as={NavLink} to="/settings">Settings</Nav.Link>
           </Nav>
-          <Nav>
+          <Nav className="align-items-center gap-2">
+            <Button
+              variant={darkMode ? "light" : "outline-light"}
+              onClick={() => setDarkMode(!darkMode)}
+            >
+              {darkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
+            </Button>
             <Button as={NavLink} to="/signin" variant="outline-light">Login/Signup</Button>
           </Nav>
-          
         </Navbar.Collapse>
       </Container>
     </Navbar>

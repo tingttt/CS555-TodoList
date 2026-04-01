@@ -9,14 +9,16 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container } from 'react-bootstrap';
 import Signin from "./Pages/Signin";
 import Signup from "./Pages/Signup";
+import { useState } from "react";
 
 export default function App() {
+  const [darkMode, setDarkMode] = useState(false);
+
   return (
-   <div className="d-flex flex-column vh-100">
-      
-      <Nav />
+    <div className={`d-flex flex-column vh-100 ${darkMode ? "dark-mode" : ""}`}>
+      <Nav darkMode={darkMode} setDarkMode={setDarkMode} />
       <main className="flex-grow-1 overflow-auto">
-        <Container className="py-4"> 
+        <Container className="py-4">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/task" element={<Tasks />} />
@@ -27,7 +29,6 @@ export default function App() {
           </Routes>
         </Container>
       </main>
-
       <Footer />
     </div>
   );
