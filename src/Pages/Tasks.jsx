@@ -85,6 +85,8 @@ const Tasks = () => {
 
   const [sortBy, setSortBy] = useState("none");
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   const deleteTodo = (id) => {
     setTodos(todos.filter((todo) => todo.id !== id));
     // keep all ids except the one to delete, so that todos without that id remains
@@ -141,12 +143,17 @@ const Tasks = () => {
       <AddTodo addTodo={addTodo} />
       <div className="lists-container">
         <TodoList
-          todos={getSortedTodos()}
+          todos={getSortedTodos().filter((todo) =>
+            todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            todo.description.toLowerCase().includes(searchQuery.toLowerCase())
+          )}
           deleteTodo={deleteTodo}
           toggleCompleted={toggleCompleted}
           editTask={() => {}}
           sortBy={sortBy}
           setSortBy={setSortBy}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
         />
 
         <CompletedTodos todos={todos} toggleCompleted={toggleCompleted} />

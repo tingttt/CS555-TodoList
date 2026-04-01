@@ -1,6 +1,6 @@
 import React from "react";
 import validation from "../utils/validation";
-const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy }) => {
+const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery }) => {
 
 
 const isPastDue = (due) => {
@@ -65,6 +65,16 @@ const isPastDue = (due) => {
           <option value="title">Title (A-Z)</option>
         </select>
       </div>
+      <div style={{ marginBottom: "12px" }}>
+        <label htmlFor="search">Search: </label>
+        <input
+          id="search"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by title or description..."
+        />
+      </div>
       {todos
         .filter((todo) => !todo.completed) //filter only not completed todos
         .map((todo) => {
@@ -90,6 +100,7 @@ const isPastDue = (due) => {
         })
         }
     </div>
+    
   );
 };
 
