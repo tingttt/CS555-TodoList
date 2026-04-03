@@ -117,6 +117,15 @@ const Tasks = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [notifications, setNotifications] = useState([]);
+  const [reminderDays, setReminderDays] = useState(() => Number(localStorage.getItem("reminderDays")) || 3);
+  const [reminderMode, setReminderMode] = useState(() => {
+    const saved = Number(localStorage.getItem("reminderDays")) || 3;
+    return [1, 3, 5, 7].includes(saved) ? String(saved) : "custom";
+  });
+  const [customDays, setCustomDays] = useState(() => {
+    const saved = Number(localStorage.getItem("reminderDays")) || 3;
+    return [1, 3, 5, 7].includes(saved) ? "" : String(saved);
+  });
   const [myName, setMyName] = useState(() => localStorage.getItem("myName") || "");
   const [nameInput, setNameInput] = useState("");
   const [showMyTasks, setShowMyTasks] = useState(false);
@@ -156,6 +165,25 @@ const Tasks = () => {
     }
   };
 
+  const updateReminderDays = (days) => {
+    setReminderDays(days);
+    localStorage.setItem("reminderDays", days);
+  };
+
+  const handleReminderModeChange = (mode) => {
+    setReminderMode(mode);
+    if (mode !== "custom") {
+      updateReminderDays(Number(mode));
+    }
+  };
+
+  const handleCustomDaysSubmit = () => {
+    const val = parseInt(customDays);
+    if (!isNaN(val) && val > 0) {
+      updateReminderDays(val);
+    }
+  };
+
   useEffect(() => {
     const upcoming = todos.filter((todo) => {
       if (todo.completed) return false;
@@ -165,10 +193,10 @@ const Tasks = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const diffDays = (dueDate - today) / (1000 * 60 * 60 * 24);
-      return diffDays >= 0 && diffDays <= 3;
+      return diffDays >= 0 && diffDays <= reminderDays;
     });
     setNotifications(upcoming);
-  }, []);
+  }, [todos, reminderDays]);
 
   const deleteTodo = (id) => {
     setTodos(todos.filter((todo) => todo.id !== id));
@@ -242,6 +270,39 @@ const Tasks = () => {
   return (
     <div>
       <h1>Task Page</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "13px", color: "#555" }}>Remind me about tasks due within:</span>
+        <select
+          value={reminderMode}
+          onChange={(e) => handleReminderModeChange(e.target.value)}
+          style={{ padding: "3px 8px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "13px" }}
+        >
+          {[1, 3, 5, 7].map((d) => (
+            <option key={d} value={String(d)}>{d} day{d > 1 ? "s" : ""}</option>
+          ))}
+          <option value="custom">Custom</option>
+        </select>
+        {reminderMode === "custom" && (
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <input
+              type="number"
+              min="1"
+              value={customDays}
+              onChange={(e) => setCustomDays(e.target.value)}
+              placeholder="days"
+              style={{ width: "60px", padding: "3px 6px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "13px" }}
+            />
+            <button
+              onClick={handleCustomDaysSubmit}
+              style={{ padding: "3px 10px", borderRadius: "4px", background: "#667eea", color: "#fff", border: "none", fontSize: "13px", cursor: "pointer" }}
+            >
+              Set
+            </button>
+          </div>
+        )}
+        <span style={{ fontSize: "12px", color: "#999" }}>(currently: {reminderDays} day{reminderDays > 1 ? "s" : ""})</span>
+      </div>
+
       {notifications.length > 0 && (
         <div style={{
           background: "#fff3cd",
