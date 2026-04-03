@@ -117,6 +117,18 @@ const Tasks = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [notifications, setNotifications] = useState([]);
+  const [myName, setMyName] = useState(() => localStorage.getItem("myName") || "");
+  const [nameInput, setNameInput] = useState("");
+  const [showMyTasks, setShowMyTasks] = useState(false);
+
+  const saveName = () => {
+    const trimmed = nameInput.trim();
+    if (trimmed) {
+      localStorage.setItem("myName", trimmed);
+      setMyName(trimmed);
+      setNameInput("");
+    }
+  };
 
   useEffect(() => {
     const upcoming = todos.filter((todo) => {
@@ -278,12 +290,46 @@ const Tasks = () => {
         </div>
       </div>
 
+      <div style={{ marginBottom: "16px" }}>
+        {!myName ? (
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <span style={{ fontSize: "13px" }}>Your name:</span>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="Enter your name to filter shared tasks"
+              style={{ padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc" }}
+            />
+            <button onClick={saveName} style={{ padding: "4px 12px" }}>Save</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              onClick={() => setShowMyTasks(false)}
+              style={{ padding: "4px 12px", background: !showMyTasks ? "#667eea" : "#e0e0e0", color: !showMyTasks ? "#fff" : "#333", border: "none", borderRadius: "4px" }}
+            >
+              All Tasks
+            </button>
+            <button
+              onClick={() => setShowMyTasks(true)}
+              style={{ padding: "4px 12px", background: showMyTasks ? "#667eea" : "#e0e0e0", color: showMyTasks ? "#fff" : "#333", border: "none", borderRadius: "4px" }}
+            >
+              My Tasks ({todos.filter((t) => !t.completed && t.assignedTo === myName).length})
+            </button>
+            <span style={{ fontSize: "13px", color: "#666" }}>Viewing as: {myName}</span>
+            <button onClick={() => { localStorage.removeItem("myName"); setMyName(""); setShowMyTasks(false); }} style={{ fontSize: "12px", color: "#999", background: "none", border: "none", cursor: "pointer" }}>change</button>
+          </div>
+        )}
+      </div>
+
       <AddTodo addTodo={addTodo} />
       <div className="lists-container">
         <TodoList
           todos={getSortedTodos().filter((todo) =>
-            todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            todo.description.toLowerCase().includes(searchQuery.toLowerCase())
+            (todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            todo.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
+            (!showMyTasks || todo.assignedTo === myName)
           )}
           deleteTodo={deleteTodo}
           toggleCompleted={toggleCompleted}
