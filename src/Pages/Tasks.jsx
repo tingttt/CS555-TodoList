@@ -130,6 +130,32 @@ const Tasks = () => {
     }
   };
 
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState("");
+
+  const exportTasks = () => {
+    const data = JSON.stringify(todos, null, 2);
+    navigator.clipboard.writeText(data);
+    alert("Task list copied to clipboard!");
+  };
+
+  const importTasks = () => {
+    try {
+      const parsed = JSON.parse(importText);
+      if (!Array.isArray(parsed)) throw new Error("Invalid format");
+      const maxId = todos.reduce((max, t) => Math.max(max, t.id), 0);
+      const newTasks = parsed.map((t, i) => ({ ...t, id: maxId + i + 1 }));
+      setTodos([...todos, ...newTasks]);
+      setNextId(maxId + newTasks.length + 1);
+      setImportText("");
+      setShowImport(false);
+      setImportError("");
+    } catch {
+      setImportError("Invalid JSON. Please paste a valid exported task list.");
+    }
+  };
+
   useEffect(() => {
     const upcoming = todos.filter((todo) => {
       if (todo.completed) return false;
@@ -319,6 +345,33 @@ const Tasks = () => {
             </button>
             <span style={{ fontSize: "13px", color: "#666" }}>Viewing as: {myName}</span>
             <button onClick={() => { localStorage.removeItem("myName"); setMyName(""); setShowMyTasks(false); }} style={{ fontSize: "12px", color: "#999", background: "none", border: "none", cursor: "pointer" }}>change</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={exportTasks} style={{ padding: "6px 14px", borderRadius: "4px", border: "1px solid #667eea", color: "#667eea", background: "none", cursor: "pointer" }}>
+            Export Tasks
+          </button>
+          <button onClick={() => { setShowImport(!showImport); setImportError(""); }} style={{ padding: "6px 14px", borderRadius: "4px", border: "1px solid #667eea", color: "#667eea", background: "none", cursor: "pointer" }}>
+            Import Tasks
+          </button>
+        </div>
+        {showImport && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder="Paste exported JSON here..."
+              rows={5}
+              style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc", fontFamily: "monospace", fontSize: "12px" }}
+            />
+            {importError && <span style={{ color: "red", fontSize: "13px" }}>{importError}</span>}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={importTasks} style={{ padding: "4px 12px", background: "#667eea", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>Confirm Import</button>
+              <button onClick={() => { setShowImport(false); setImportError(""); }} style={{ padding: "4px 12px", background: "#e0e0e0", border: "none", borderRadius: "4px", cursor: "pointer" }}>Cancel</button>
+            </div>
           </div>
         )}
       </div>
