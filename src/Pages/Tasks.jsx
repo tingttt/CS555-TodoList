@@ -151,6 +151,21 @@ const Tasks = () => {
     (todos.filter((todo) => todo.completed).length / todos.length) * 100
   );
 
+  const completedCount = todos.filter((t) => t.completed).length;
+  const pendingCount = todos.length - completedCount;
+
+  const priorityStats = ["high", "medium", "low"].map((p) => {
+    const group = todos.filter((t) => t.priority === p);
+    const done = group.filter((t) => t.completed).length;
+    return { label: p, total: group.length, done };
+  });
+
+  const categoryStats = [...new Set(todos.map((t) => t.category))].map((c) => {
+    const group = todos.filter((t) => t.category === c);
+    const done = group.filter((t) => t.completed).length;
+    return { label: c, total: group.length, done };
+  });
+
   const addTodo = (newTodo) => {
     const todoWithId = { id: nextId, ...newTodo };
     setTodos([...todos, todoWithId]);
@@ -224,6 +239,45 @@ const Tasks = () => {
           }} />
         </div>
       </div>
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
+          {[
+            { label: "Total", value: todos.length },
+            { label: "Completed", value: completedCount },
+            { label: "Pending", value: pendingCount },
+          ].map(({ label, value }) => (
+            <div key={label} style={{
+              flex: 1, textAlign: "center", padding: "12px",
+              background: "#f5f5f5", borderRadius: "8px", border: "1px solid #ddd"
+            }}>
+              <div style={{ fontSize: "24px", fontWeight: "bold" }}>{value}</div>
+              <div style={{ fontSize: "13px", color: "#666" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: "12px" }}>
+          <div style={{ flex: 1 }}>
+            <strong style={{ fontSize: "13px" }}>By Priority</strong>
+            {priorityStats.map(({ label, total, done }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "2px 0" }}>
+                <span style={{ textTransform: "capitalize" }}>{label}</span>
+                <span>{done} / {total}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ flex: 1 }}>
+            <strong style={{ fontSize: "13px" }}>By Category</strong>
+            {categoryStats.map(({ label, total, done }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "2px 0" }}>
+                <span style={{ textTransform: "capitalize" }}>{label}</span>
+                <span>{done} / {total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <AddTodo addTodo={addTodo} />
       <div className="lists-container">
         <TodoList
