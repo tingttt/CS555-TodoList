@@ -117,6 +117,72 @@ const Tasks = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [notifications, setNotifications] = useState([]);
+  const [reminderDays, setReminderDays] = useState(() => Number(localStorage.getItem("reminderDays")) || 3);
+  const [reminderMode, setReminderMode] = useState(() => {
+    const saved = Number(localStorage.getItem("reminderDays")) || 3;
+    return [1, 3, 5, 7].includes(saved) ? String(saved) : "custom";
+  });
+  const [customDays, setCustomDays] = useState(() => {
+    const saved = Number(localStorage.getItem("reminderDays")) || 3;
+    return [1, 3, 5, 7].includes(saved) ? "" : String(saved);
+  });
+  const [myName, setMyName] = useState(() => localStorage.getItem("myName") || "");
+  const [nameInput, setNameInput] = useState("");
+  const [showMyTasks, setShowMyTasks] = useState(false);
+
+  const saveName = () => {
+    const trimmed = nameInput.trim();
+    if (trimmed) {
+      localStorage.setItem("myName", trimmed);
+      setMyName(trimmed);
+      setNameInput("");
+    }
+  };
+
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState("");
+
+  const exportTasks = () => {
+    const data = JSON.stringify(todos, null, 2);
+    navigator.clipboard.writeText(data);
+    alert("Task list copied to clipboard!");
+  };
+
+  const importTasks = () => {
+    try {
+      const parsed = JSON.parse(importText);
+      if (!Array.isArray(parsed)) throw new Error("Invalid format");
+      const maxId = todos.reduce((max, t) => Math.max(max, t.id), 0);
+      const newTasks = parsed.map((t, i) => ({ ...t, id: maxId + i + 1 }));
+      setTodos([...todos, ...newTasks]);
+      setNextId(maxId + newTasks.length + 1);
+      setImportText("");
+      setShowImport(false);
+      setImportError("");
+    } catch {
+      setImportError("Invalid JSON. Please paste a valid exported task list.");
+    }
+  };
+
+  const updateReminderDays = (days) => {
+    setReminderDays(days);
+    localStorage.setItem("reminderDays", days);
+  };
+
+  const handleReminderModeChange = (mode) => {
+    setReminderMode(mode);
+    if (mode !== "custom") {
+      updateReminderDays(Number(mode));
+    }
+  };
+
+  const handleCustomDaysSubmit = () => {
+    const val = parseInt(customDays);
+    if (!isNaN(val) && val > 0) {
+      updateReminderDays(val);
+    }
+  };
 
   useEffect(() => {
     const upcoming = todos.filter((todo) => {
@@ -127,10 +193,10 @@ const Tasks = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const diffDays = (dueDate - today) / (1000 * 60 * 60 * 24);
-      return diffDays >= 0 && diffDays <= 3;
+      return diffDays >= 0 && diffDays <= reminderDays;
     });
     setNotifications(upcoming);
-  }, []);
+  }, [todos, reminderDays]);
 
   const deleteTodo = (id) => {
     setTodos(todos.filter((todo) => todo.id !== id));
@@ -204,6 +270,39 @@ const Tasks = () => {
   return (
     <div>
       <h1>Task Page</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "13px", color: "#555" }}>Remind me about tasks due within:</span>
+        <select
+          value={reminderMode}
+          onChange={(e) => handleReminderModeChange(e.target.value)}
+          style={{ padding: "3px 8px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "13px" }}
+        >
+          {[1, 3, 5, 7].map((d) => (
+            <option key={d} value={String(d)}>{d} day{d > 1 ? "s" : ""}</option>
+          ))}
+          <option value="custom">Custom</option>
+        </select>
+        {reminderMode === "custom" && (
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <input
+              type="number"
+              min="1"
+              value={customDays}
+              onChange={(e) => setCustomDays(e.target.value)}
+              placeholder="days"
+              style={{ width: "60px", padding: "3px 6px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "13px" }}
+            />
+            <button
+              onClick={handleCustomDaysSubmit}
+              style={{ padding: "3px 10px", borderRadius: "4px", background: "#667eea", color: "#fff", border: "none", fontSize: "13px", cursor: "pointer" }}
+            >
+              Set
+            </button>
+          </div>
+        )}
+        <span style={{ fontSize: "12px", color: "#999" }}>(currently: {reminderDays} day{reminderDays > 1 ? "s" : ""})</span>
+      </div>
+
       {notifications.length > 0 && (
         <div style={{
           background: "#fff3cd",
@@ -278,12 +377,73 @@ const Tasks = () => {
         </div>
       </div>
 
+      <div style={{ marginBottom: "16px" }}>
+        {!myName ? (
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <span style={{ fontSize: "13px" }}>Your name:</span>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="Enter your name to filter shared tasks"
+              style={{ padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc" }}
+            />
+            <button onClick={saveName} style={{ padding: "4px 12px" }}>Save</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              onClick={() => setShowMyTasks(false)}
+              style={{ padding: "4px 12px", background: !showMyTasks ? "#667eea" : "#e0e0e0", color: !showMyTasks ? "#fff" : "#333", border: "none", borderRadius: "4px" }}
+            >
+              All Tasks
+            </button>
+            <button
+              onClick={() => setShowMyTasks(true)}
+              style={{ padding: "4px 12px", background: showMyTasks ? "#667eea" : "#e0e0e0", color: showMyTasks ? "#fff" : "#333", border: "none", borderRadius: "4px" }}
+            >
+              My Tasks ({todos.filter((t) => !t.completed && t.assignedTo === myName).length})
+            </button>
+            <span style={{ fontSize: "13px", color: "#666" }}>Viewing as: {myName}</span>
+            <button onClick={() => { localStorage.removeItem("myName"); setMyName(""); setShowMyTasks(false); }} style={{ fontSize: "12px", color: "#999", background: "none", border: "none", cursor: "pointer" }}>change</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={exportTasks} style={{ padding: "6px 14px", borderRadius: "4px", border: "1px solid #667eea", color: "#667eea", background: "none", cursor: "pointer" }}>
+            Export Tasks
+          </button>
+          <button onClick={() => { setShowImport(!showImport); setImportError(""); }} style={{ padding: "6px 14px", borderRadius: "4px", border: "1px solid #667eea", color: "#667eea", background: "none", cursor: "pointer" }}>
+            Import Tasks
+          </button>
+        </div>
+        {showImport && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder="Paste exported JSON here..."
+              rows={5}
+              style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc", fontFamily: "monospace", fontSize: "12px" }}
+            />
+            {importError && <span style={{ color: "red", fontSize: "13px" }}>{importError}</span>}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={importTasks} style={{ padding: "4px 12px", background: "#667eea", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>Confirm Import</button>
+              <button onClick={() => { setShowImport(false); setImportError(""); }} style={{ padding: "4px 12px", background: "#e0e0e0", border: "none", borderRadius: "4px", cursor: "pointer" }}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <AddTodo addTodo={addTodo} />
       <div className="lists-container">
         <TodoList
           todos={getSortedTodos().filter((todo) =>
-            todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            todo.description.toLowerCase().includes(searchQuery.toLowerCase())
+            (todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            todo.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
+            (!showMyTasks || todo.assignedTo === myName)
           )}
           deleteTodo={deleteTodo}
           toggleCompleted={toggleCompleted}
