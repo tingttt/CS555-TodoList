@@ -1,6 +1,6 @@
 import React from "react";
 import validation from "../utils/validation";
-const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery }) => {
+const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery, filterPriority, setFilterPriority, filterCategory, setFilterCategory }) => {
 
 
 const isPastDue = (due) => {
@@ -74,6 +74,34 @@ const isPastDue = (due) => {
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by title or description..."
         />
+      </div>
+      <div style={{ marginBottom: "12px" }}>
+        <label htmlFor="filterPriority">Priority: </label>
+        <select
+          id="filterPriority"
+          value={filterPriority}
+          onChange={(e) => setFilterPriority(e.target.value)}
+        >
+          <option value="all">All</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div style={{ marginBottom: "12px" }}>
+        <label htmlFor="filterCategory">Category: </label>
+        <select
+          id="filterCategory"
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
+          <option value="all">All</option>
+          <option value="work">Work</option>
+          <option value="personal">Personal</option>
+          <option value="health">Health</option>
+          <option value="finance">Finance</option>
+          <option value="learn">Learning</option>
+        </select>
       </div>
       {todos
         .filter((todo) => !todo.completed) //filter only not completed todos

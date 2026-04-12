@@ -118,6 +118,10 @@ const Tasks = () => {
 
   const [lastDeleted, setLastDeleted] = useState(null);
 
+  const [filterPriority, setFilterPriority] = useState("all");
+
+  const [filterCategory, setFilterCategory] = useState("all");
+
   const [notifications, setNotifications] = useState([]);
   const [reminderDays, setReminderDays] = useState(() => Number(localStorage.getItem("reminderDays")) || 3);
   const [reminderMode, setReminderMode] = useState(() => {
@@ -475,15 +479,21 @@ const Tasks = () => {
           todos={getSortedTodos().filter((todo) =>
             (todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             todo.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
-            (!showMyTasks || todo.assignedTo === myName)
+            (!showMyTasks || todo.assignedTo === myName) &&
+            (filterPriority === "all" || todo.priority === filterPriority) &&
+            (filterCategory === "all" || todo.category === filterCategory)
           )}
-          deleteTodo={deleteTodo}
-          toggleCompleted={toggleCompleted}
-          editTask={() => {}}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
+            deleteTodo={deleteTodo}
+            toggleCompleted={toggleCompleted}
+            editTask={() => {}}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            filterPriority={filterPriority}
+            setFilterPriority={setFilterPriority}
+            filterCategory={filterCategory}
+            setFilterCategory={setFilterCategory}
         />
 
         <CompletedTodos todos={todos} toggleCompleted={toggleCompleted} />
