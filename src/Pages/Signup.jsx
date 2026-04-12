@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Form, Button, Container } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Signup = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState('');
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -21,8 +24,10 @@ const Signup = () => {
       return;
     }
 
-    // Add your signup logic here
-    console.log(form);
+    localStorage.setItem('profileName', form.name);
+    localStorage.setItem('profileEmail', form.email);
+    localStorage.setItem('profilePassword', form.password);
+    navigate('/signin');
   };
 
   return (
@@ -87,7 +92,7 @@ const Signup = () => {
           </Button>
 
           <p className="text-center mt-3">
-            Already have an account? <Link to="/login">Sign in</Link>
+            Already have an account? <Link to="/signin">Sign in</Link>
           </p>
 
           <p className="mt-3 mb-3 text-body-secondary text-center">

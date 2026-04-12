@@ -9,6 +9,7 @@ function AppNavbar({ darkMode, setDarkMode }) {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
+  
             <Nav.Link as={NavLink} to="/" end>Home</Nav.Link>
             <Nav.Link as={NavLink} to="/task" end>Task</Nav.Link>
             <Nav.Link as={NavLink} to="/calendar" end>Calendar</Nav.Link>
@@ -20,8 +21,21 @@ function AppNavbar({ darkMode, setDarkMode }) {
               onClick={() => setDarkMode(!darkMode)}
             >
               {darkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
+
             </Button>
-            <Button as={NavLink} to="/signin" variant="outline-light">Login/Signup</Button>
+            {localStorage.getItem('isLoggedIn') === 'true' ? (
+              <Button
+                variant="outline-light"
+                onClick={() => {
+                  localStorage.removeItem('isLoggedIn');
+                  window.location.href = '/signin';
+                }}
+              >
+                Logout
+              </Button>
+            ) : (
+              <Button as={NavLink} to="/signin" variant="outline-light">Login/Signup</Button>
+            )}
           </Nav>
         </Navbar.Collapse>
       </Container>
