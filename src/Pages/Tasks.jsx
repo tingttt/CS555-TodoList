@@ -116,6 +116,8 @@ const Tasks = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [lastDeleted, setLastDeleted] = useState(null);
+
   const [notifications, setNotifications] = useState([]);
   const [reminderDays, setReminderDays] = useState(() => Number(localStorage.getItem("reminderDays")) || 3);
   const [reminderMode, setReminderMode] = useState(() => {
@@ -199,9 +201,16 @@ const Tasks = () => {
   }, [todos, reminderDays]);
 
   const deleteTodo = (id) => {
+    const todo = todos.find((t) => t.id === id);
+    setLastDeleted(todo);
     setTodos(todos.filter((todo) => todo.id !== id));
-    // keep all ids except the one to delete, so that todos without that id remains
   };
+
+  const undoDelete = () => {
+    setTodos([...todos, lastDeleted]);
+    setLastDeleted(null);
+  };
+
   // toggle Complete and add and delete should all on this jsx file, because all these functions change the todos state
   const toggleCompleted = (todoToToggle) => {
     setTodos(
@@ -321,6 +330,29 @@ const Tasks = () => {
           </ul>
         </div>
       )}
+
+      {lastDeleted && (
+      <div style={{
+        background: "#d1ecf1",
+        border: "1px solid #bee5eb",
+        borderRadius: "8px",
+        padding: "10px 16px",
+        marginBottom: "16px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center"
+      }}>
+        <span>🗑 <strong>{lastDeleted.title}</strong> was deleted.</span>
+        <button onClick={undoDelete} style={{
+          background: "#17a2b8",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          padding: "6px 14px",
+          cursor: "pointer"
+        }}>Undo</button>
+      </div>
+    )}
       <div style={{ marginBottom: "16px" }}>
         <p>Overall Completion: {completionPercentage}%</p>
         <div style={{
