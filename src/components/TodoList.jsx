@@ -1,6 +1,6 @@
 import React from "react";
 import validation from "../utils/validation";
-const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery }) => {
+const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery, filterPriority, setFilterPriority, filterCategory, setFilterCategory }) => {
 
 
 const isPastDue = (due) => {
@@ -75,6 +75,34 @@ const isPastDue = (due) => {
           placeholder="Search by title or description..."
         />
       </div>
+      <div style={{ marginBottom: "12px" }}>
+        <label htmlFor="filterPriority">Priority: </label>
+        <select
+          id="filterPriority"
+          value={filterPriority}
+          onChange={(e) => setFilterPriority(e.target.value)}
+        >
+          <option value="all">All</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div style={{ marginBottom: "12px" }}>
+        <label htmlFor="filterCategory">Category: </label>
+        <select
+          id="filterCategory"
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
+          <option value="all">All</option>
+          <option value="work">Work</option>
+          <option value="personal">Personal</option>
+          <option value="health">Health</option>
+          <option value="finance">Finance</option>
+          <option value="learn">Learning</option>
+        </select>
+      </div>
       {todos
         .filter((todo) => !todo.completed) //filter only not completed todos
         .map((todo) => {
@@ -93,7 +121,11 @@ const isPastDue = (due) => {
               {todo.category && <p>Category: {todo.category}</p>}
               {todo.assignedTo && <p>Assigned To: {todo.assignedTo}</p>}
               <p>Completed: No</p>
-              <button className="deletebutton" onClick={() => deleteTodo(todo.id)}>Delete</button>
+              <button className="deletebutton" onClick={() => {
+                if (window.confirm(`Are you sure you want to delete "${todo.title}"?`)) {
+                  deleteTodo(todo.id);
+                }
+              }}>Delete</button>
               <button onClick={() => toggleCompleted(todo)}>Complete</button>
               <button onClick={() => editTask(todo)}>Edit</button>
             </div>
