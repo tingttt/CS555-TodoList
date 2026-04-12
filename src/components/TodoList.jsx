@@ -93,7 +93,11 @@ const isPastDue = (due) => {
               {todo.category && <p>Category: {todo.category}</p>}
               {todo.assignedTo && <p>Assigned To: {todo.assignedTo}</p>}
               <p>Completed: No</p>
-              <button className="deletebutton" onClick={() => deleteTodo(todo.id)}>Delete</button>
+              <button className="deletebutton" onClick={() => {
+                if (window.confirm(`Are you sure you want to delete "${todo.title}"?`)) {
+                  deleteTodo(todo.id);
+                }
+              }}>Delete</button>
               <button onClick={() => toggleCompleted(todo)}>Complete</button>
               <button onClick={() => editTask(todo)}>Edit</button>
             </div>
