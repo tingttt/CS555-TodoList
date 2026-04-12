@@ -23,9 +23,9 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/task" element={<Tasks />} />
             <Route path="/calendar" element={<Calendar />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/signin" element={<Signin />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/settings" element={<Settings darkMode={darkMode} setDarkMode={setDarkMode} />} />   
           </Routes>
         </Container>
       </main>

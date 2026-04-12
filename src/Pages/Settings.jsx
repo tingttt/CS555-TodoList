@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Form, Button, Container, Alert } from "react-bootstrap";
 
-export default function Settings() {
+export default function Settings( {darkMode, setDarkMode }) {
   const [profile, setProfile] = useState({
     name: localStorage.getItem("profileName") || "",
     email: localStorage.getItem("profileEmail") || "",
@@ -126,6 +126,36 @@ export default function Settings() {
           Save Changes
         </Button>
       </Form>
+
+      <hr className="my-4" />
+      <h4 className="mb-3">App Preferences</h4>
+
+      <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
+        <Form.Label className="mb-0">Dark Mode</Form.Label>
+        <Form.Check
+          type="switch"
+          id="darkModeSwitch"
+          checked={darkMode}
+          onChange={() => setDarkMode(!darkMode)}
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3">
+        <Form.Label>Reminder Window (days before due date)</Form.Label>
+        <Form.Select
+          defaultValue={localStorage.getItem("reminderDays") || "3"}
+          onChange={(e) => localStorage.setItem("reminderDays", e.target.value)}
+        >
+          <option value="1">1 day</option>
+          <option value="3">3 days</option>
+          <option value="5">5 days</option>
+          <option value="7">7 days</option>
+        </Form.Select>
+        <Form.Text className="text-muted">
+          You'll see reminders for tasks due within this window.
+        </Form.Text>
+      </Form.Group>
+      
     </Container>
   );
 }
