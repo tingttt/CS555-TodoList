@@ -1,34 +1,33 @@
 import React, { useState } from 'react';
 import { Form, Button, Container } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Signin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const { signin } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect to the page the user originally tried to visit, or /task
+  const from = location.state?.from?.pathname || '/task';
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    const savedEmail = localStorage.getItem('profileEmail');
-    const savedPassword = localStorage.getItem('profilePassword');
-
-    if (email !== savedEmail || password !== savedPassword) {
-      setError('Invalid email or password.');
-      return;
+    setLoading(true);
+    try {
+      await signin(email, password);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid email or password.');
+    } finally {
+      setLoading(false);
     }
-
-    localStorage.setItem('isLoggedIn', 'true');
-    if (remember) {
-      localStorage.setItem('rememberedEmail', email);
-    } else {
-      localStorage.removeItem('rememberedEmail');
-    }
-
-    navigate('/task');
   };
 
   return (
@@ -61,17 +60,13 @@ const Signin = () => {
             <Form.Label>Password</Form.Label>
           </Form.Group>
 
-          <Form.Check
-            className="text-start my-3"
-            type="checkbox"
-            id="remember-me"
-            label="Remember me"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-          />
-
-          <Button variant="primary" className="w-100 py-2" type="submit">
-            Sign in
+          <Button
+            variant="primary"
+            className="w-100 py-2"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? 'Signing in…' : 'Sign in'}
           </Button>
 
           <p className="text-center mt-3">

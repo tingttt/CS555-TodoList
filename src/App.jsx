@@ -5,6 +5,7 @@ import Tasks from "./Pages/Tasks";
 import Settings from "./Pages/Settings";
 import Nav from './components/Nav';
 import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container } from 'react-bootstrap';
 import Signin from "./Pages/Signin";
@@ -20,12 +21,23 @@ export default function App() {
       <main className="flex-grow-1 overflow-auto">
         <Container className="py-4">
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/task" element={<Tasks />} />
-            <Route path="/calendar" element={<Calendar />} />
             <Route path="/signin" element={<Signin />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/settings" element={<Settings darkMode={darkMode} setDarkMode={setDarkMode} />} />   
+
+            {/* Protected routes — redirects to /signin if not authenticated */}
+            <Route path="/task" element={
+              <ProtectedRoute><Tasks /></ProtectedRoute>
+            } />
+            <Route path="/calendar" element={
+              <ProtectedRoute><Calendar /></ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings darkMode={darkMode} setDarkMode={setDarkMode} />
+              </ProtectedRoute>
+            } />
           </Routes>
         </Container>
       </main>

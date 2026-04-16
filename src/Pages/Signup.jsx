@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { Form, Button, Container } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Signup = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const { signup } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const navigate = useNavigate();
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -24,10 +26,15 @@ const Signup = () => {
       return;
     }
 
-    localStorage.setItem('profileName', form.name);
-    localStorage.setItem('profileEmail', form.email);
-    localStorage.setItem('profilePassword', form.password);
-    navigate('/signin');
+    setLoading(true);
+    try {
+      await signup(form.name, form.email, form.password);
+      navigate('/task', { replace: true }); // auto-login after signup
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not create account.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -87,8 +94,8 @@ const Signup = () => {
             <Form.Label>Confirm Password</Form.Label>
           </Form.Group>
 
-          <Button variant="primary" className="w-100 py-2" type="submit">
-            Sign Up
+          <Button variant="primary" className="w-100 py-2" type="submit" disabled={loading}>
+            {loading ? 'Creating account…' : 'Sign Up'}
           </Button>
 
           <p className="text-center mt-3">
