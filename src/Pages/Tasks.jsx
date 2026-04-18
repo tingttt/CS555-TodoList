@@ -112,7 +112,12 @@ const Tasks = () => {
 
   const [nextId, setNextId] = useState(hardcodedBuyApple.length + 1); // Start from 11 for add toDOs
 
-  const [sortBy, setSortBy] = useState("none");
+  const [sortBy, setSortBy] = useState(() => localStorage.getItem("sortBy") || "smart");
+
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    localStorage.setItem("sortBy", value);
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -135,6 +140,20 @@ const Tasks = () => {
   const [myName, setMyName] = useState(() => localStorage.getItem("myName") || "");
   const [nameInput, setNameInput] = useState("");
   const [showMyTasks, setShowMyTasks] = useState(false);
+
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const bulkComplete = () => {
+    setTodos(todos.map((t) => selectedIds.includes(t.id) ? { ...t, completed: true } : t));
+    setSelectedIds([]);
+  };
+
+  const bulkDelete = () => {
+    if (window.confirm(`Delete ${selectedIds.length} selected task(s)?`)) {
+      setTodos(todos.filter((t) => !selectedIds.includes(t.id)));
+      setSelectedIds([]);
+    }
+  };
 
   const saveName = () => {
     const trimmed = nameInput.trim();
@@ -274,6 +293,17 @@ const Tasks = () => {
       );
     } else if (sortBy === "title") {
       sorted.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === "smart") {
+      sorted.sort((a, b) => {
+        const diff = (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
+        if (diff !== 0) return diff;
+        const parseDate = (due) => {
+          if (!due) return Infinity;
+          const [m, d, y] = due.split("/").map(Number);
+          return new Date(y, m - 1, d).getTime();
+        };
+        return parseDate(a.due) - parseDate(b.due);
+      });
     }
 
     return sorted;
@@ -487,13 +517,17 @@ const Tasks = () => {
             toggleCompleted={toggleCompleted}
             editTask={() => {}}
             sortBy={sortBy}
-            setSortBy={setSortBy}
+            setSortBy={handleSortChange}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             filterPriority={filterPriority}
             setFilterPriority={setFilterPriority}
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
+            bulkComplete={bulkComplete}
+            bulkDelete={bulkDelete}
         />
 
         <CompletedTodos todos={todos} toggleCompleted={toggleCompleted} />
