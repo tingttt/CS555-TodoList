@@ -136,6 +136,20 @@ const Tasks = () => {
   const [nameInput, setNameInput] = useState("");
   const [showMyTasks, setShowMyTasks] = useState(false);
 
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const bulkComplete = () => {
+    setTodos(todos.map((t) => selectedIds.includes(t.id) ? { ...t, completed: true } : t));
+    setSelectedIds([]);
+  };
+
+  const bulkDelete = () => {
+    if (window.confirm(`Delete ${selectedIds.length} selected task(s)?`)) {
+      setTodos(todos.filter((t) => !selectedIds.includes(t.id)));
+      setSelectedIds([]);
+    }
+  };
+
   const saveName = () => {
     const trimmed = nameInput.trim();
     if (trimmed) {
@@ -494,6 +508,10 @@ const Tasks = () => {
             setFilterPriority={setFilterPriority}
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
+            bulkComplete={bulkComplete}
+            bulkDelete={bulkDelete}
         />
 
         <CompletedTodos todos={todos} toggleCompleted={toggleCompleted} />

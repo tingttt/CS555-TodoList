@@ -1,6 +1,22 @@
 import React from "react";
 import validation from "../utils/validation";
-const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery, filterPriority, setFilterPriority, filterCategory, setFilterCategory }) => {
+const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery, filterPriority, setFilterPriority, filterCategory, setFilterCategory, selectedIds, setSelectedIds, bulkComplete, bulkDelete }) => {
+  const visibleIncomplete = todos.filter((t) => !t.completed);
+  const allSelected = visibleIncomplete.length > 0 && visibleIncomplete.every((t) => selectedIds.includes(t.id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(visibleIncomplete.map((t) => t.id));
+    }
+  };
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
 
 
 const isPastDue = (due) => {
@@ -51,6 +67,31 @@ const isPastDue = (due) => {
   return (
     <div className="todoList">
       <h2>Todo List</h2>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px" }}>
+          <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
+          Select All
+        </label>
+        {selectedIds.length > 0 && (
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "#555" }}>{selectedIds.length} selected</span>
+            <button
+              onClick={bulkComplete}
+              style={{ padding: "4px 12px", background: "#28a745", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px" }}
+            >
+              Complete Selected
+            </button>
+            <button
+              onClick={bulkDelete}
+              style={{ padding: "4px 12px", background: "#dc3545", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px" }}
+            >
+              Delete Selected
+            </button>
+          </div>
+        )}
+      </div>
+
       <div style={{ marginBottom: "12px" }}>
         <label htmlFor="sort">Sort by: </label>
         <select
@@ -108,7 +149,13 @@ const isPastDue = (due) => {
         .map((todo) => {
           const overdue = isPastDue(todo.due);
           return (
-            <div key={todo.id} className={`todo ${overdue ? "todo--overdue" : ""}`}>
+            <div key={todo.id} className={`todo ${overdue ? "todo--overdue" : ""}`} style={{ position: "relative" }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(todo.id)}
+                onChange={() => toggleSelectOne(todo.id)}
+                style={{ position: "absolute", top: "10px", right: "10px", width: "16px", height: "16px", cursor: "pointer" }}
+              />
               <h1>{formatAndValidateTitle(todo.title)}</h1>
               <p>{formatAndValidateDescription(todo.description)}</p>
               <p>
