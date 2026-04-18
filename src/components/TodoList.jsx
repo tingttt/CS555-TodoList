@@ -99,6 +99,7 @@ const isPastDue = (due) => {
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
         >
+          <option value="smart">Smart (Priority + Due Date)</option>
           <option value="none">None</option>
           <option value="due-asc">Due Date (Earliest First)</option>
           <option value="due-desc">Due Date (Latest First)</option>
