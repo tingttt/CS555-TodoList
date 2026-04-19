@@ -67,84 +67,65 @@ const isPastDue = (due) => {
 
   return (
     <div className="todoList">
-      <h2>Todo List</h2>
-
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "14px" }}>
+      <div className="todolist-header">
+        <h2>Todo List</h2>
+        <label className="select-all-label">
           <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
-          Select All
+          <span>Select All</span>
         </label>
-        {selectedIds.length > 0 && (
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "13px", color: "#555" }}>{selectedIds.length} selected</span>
-            <button
-              onClick={bulkComplete}
-              style={{ padding: "4px 12px", background: "#28a745", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px" }}
-            >
-              Complete Selected
-            </button>
-            <button
-              onClick={bulkDelete}
-              style={{ padding: "4px 12px", background: "#dc3545", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px" }}
-            >
-              Delete Selected
-            </button>
-          </div>
-        )}
       </div>
 
-      <div style={{ marginBottom: "12px" }}>
-        <label htmlFor="sort">Sort by: </label>
-        <select
-          id="sort"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="smart">Smart (Priority + Due Date)</option>
-          <option value="none">None</option>
-          <option value="due-asc">Due Date (Earliest First)</option>
-          <option value="due-desc">Due Date (Latest First)</option>
-          <option value="priority">Priority (High to Low)</option>
-          <option value="title">Title (A-Z)</option>
-        </select>
-      </div>
-      <div style={{ marginBottom: "12px" }}>
-        <label htmlFor="search">Search: </label>
-        <input
-          id="search"
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by title or description..."
-        />
-      </div>
-      <div style={{ marginBottom: "12px" }}>
-        <label htmlFor="filterPriority">Priority: </label>
-        <select
-          id="filterPriority"
-          value={filterPriority}
-          onChange={(e) => setFilterPriority(e.target.value)}
-        >
-          <option value="all">All</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-      </div>
-      <div style={{ marginBottom: "12px" }}>
-        <label htmlFor="filterCategory">Category: </label>
-        <select
-          id="filterCategory"
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-        >
-          <option value="all">All</option>
-          <option value="work">Work</option>
-          <option value="personal">Personal</option>
-          <option value="health">Health</option>
-          <option value="finance">Finance</option>
-          <option value="learn">Learning</option>
-        </select>
+      {selectedIds.length > 0 && (
+        <div className="bulk-action-bar">
+          <span className="bulk-count">{selectedIds.length} selected</span>
+          <button className="bulk-btn bulk-btn--complete" onClick={bulkComplete}>✓ Complete</button>
+          <button className="bulk-btn bulk-btn--delete" onClick={bulkDelete}>✕ Delete</button>
+        </div>
+      )}
+
+      <div className="todolist-filters">
+        <div className="filter-search">
+          <span className="filter-icon">🔍</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tasks..."
+          />
+        </div>
+        <div className="filter-row">
+          <div className="filter-group">
+            <label>Sort</label>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="smart">Smart</option>
+              <option value="none">None</option>
+              <option value="due-asc">Due ↑</option>
+              <option value="due-desc">Due ↓</option>
+              <option value="priority">Priority</option>
+              <option value="title">Title A–Z</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>Priority</label>
+            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+              <option value="all">All</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>Category</label>
+            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+              <option value="all">All</option>
+              <option value="work">Work</option>
+              <option value="personal">Personal</option>
+              <option value="health">Health</option>
+              <option value="finance">Finance</option>
+              <option value="learn">Learning</option>
+            </select>
+          </div>
+        </div>
       </div>
       {todos
         .filter((todo) => !todo.completed) //filter only not completed todos
@@ -153,8 +134,8 @@ const isPastDue = (due) => {
           return (
             <div
               key={todo.id}
-              className={`todo ${overdue ? "todo--overdue" : ""}`}
-              style={{ position: "relative", cursor: "grab" }}
+              className={`todo ${overdue ? "todo--overdue" : ""} ${todo.priority ? `priority-${todo.priority}` : ""}`}
+              style={{ position: "relative" }}
               draggable
               onDragStart={() => { dragId.current = todo.id; }}
               onDragOver={(e) => e.preventDefault()}
@@ -164,27 +145,27 @@ const isPastDue = (due) => {
                 type="checkbox"
                 checked={selectedIds.includes(todo.id)}
                 onChange={() => toggleSelectOne(todo.id)}
-                style={{ position: "absolute", top: "10px", right: "10px", width: "16px", height: "16px", cursor: "pointer" }}
+                style={{ position: "absolute", top: "12px", right: "12px", width: "16px", height: "16px", cursor: "pointer" }}
               />
               <h1>{formatAndValidateTitle(todo.title)}</h1>
-              <p>{formatAndValidateDescription(todo.description)}</p>
-              <p>
+              <p style={{ marginBottom: "10px" }}>{formatAndValidateDescription(todo.description)}</p>
+              <div className="todo-meta">
                 <span className={`due-date-badge ${overdue ? "due-date-badge--overdue" : ""}`}>
-                  {overdue ? "⚠ Overdue: " : "Due: "}
-                  {formatAndValidateDate(todo.due)}
+                  {overdue ? "⚠ Overdue: " : "📅 "}{formatAndValidateDate(todo.due)}
                 </span>
-              </p>
-              {todo.priority && <p>Priority: {todo.priority}</p>}
-              {todo.category && <p>Category: {todo.category}</p>}
-              {todo.assignedTo && <p>Assigned To: {todo.assignedTo}</p>}
-              <p>Completed: No</p>
-              <button className="deletebutton" onClick={() => {
-                if (window.confirm(`Are you sure you want to delete "${todo.title}"?`)) {
-                  deleteTodo(todo.id);
-                }
-              }}>Delete</button>
-              <button onClick={() => toggleCompleted(todo)}>Complete</button>
-              <button onClick={() => editTask(todo)}>Edit</button>
+                {todo.priority && <span className={`badge badge-${todo.priority}`}>{todo.priority}</span>}
+                {todo.category && <span className="badge badge-category">{todo.category}</span>}
+                {todo.assignedTo && <span className="badge badge-assigned">👤 {todo.assignedTo}</span>}
+              </div>
+              <div className="todo-actions">
+                <button className="deletebutton" onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete "${todo.title}"?`)) {
+                    deleteTodo(todo.id);
+                  }
+                }}>Delete</button>
+                <button onClick={() => toggleCompleted(todo)}>Complete</button>
+                <button className="editbutton" onClick={() => editTask(todo)}>Edit</button>
+              </div>
             </div>
           );
         })

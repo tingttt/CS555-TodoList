@@ -1,52 +1,29 @@
-// src/components/CompletedTodos.jsx
 import React from "react";
 import validation from "../utils/validation";
+
 const CompletedTodos = ({ todos, toggleCompleted }) => {
-  const formatAndValidateDate = (date) => {
-    try {
-      return validation.checkDate(date, "Due Date");
-    } catch (error) {
-      console.error(error.message);
-      return date;
-    }
-  };
-  const formatAndValidateTitle = (title) => {
-    try {
-      return validation.checkTitle(title);
-    } catch (error) {
-      console.error(error.message);
-      return title;
-    }
-  };
-  const formatAndValidateDescription = (description) => {
-    try {
-      return validation.checkDescription(description);
-    } catch (error) {
-      console.error(error.message);
-      return description;
-    }
-  };
+  const fmt = (fn, val) => { try { return fn(val); } catch { return val; } };
 
   return (
     <div className="completedTodos">
-      <h2>Completed Todos</h2>
-      {todos
-        .filter((todo) => todo.completed)
-        .map(
-          (
-            todo //filter only completed todos, map through each todo to display
-          ) => (
-            <div key={todo.id} className="todo">
-              <h1>{formatAndValidateTitle(todo.title)}</h1>
-              <p>{formatAndValidateDescription(todo.description)}</p>
-              <p>Due Date: {formatAndValidateDate(todo.due)}</p>
-              <p>Completed: Yes</p>
-              <button onClick={() => toggleCompleted(todo)}>
-                Mark Incomplete
-              </button>
-            </div>
-          )
-        )}
+      <h2>Completed ({todos.filter((t) => t.completed).length})</h2>
+      {todos.filter((t) => t.completed).map((todo) => (
+        <div key={todo.id} className="todo" style={{ opacity: 0.75 }}>
+          <h1 style={{ textDecoration: "line-through", color: "var(--text-muted)" }}>
+            {fmt(validation.checkTitle, todo.title)}
+          </h1>
+          <p>{fmt(validation.checkDescription, todo.description)}</p>
+          <div className="todo-meta">
+            <span className="due-date-badge">📅 {fmt(validation.checkDate, todo.due)}</span>
+            {todo.priority && <span className={`badge badge-${todo.priority}`}>{todo.priority}</span>}
+            {todo.category && <span className="badge badge-category">{todo.category}</span>}
+            <span className="badge badge-done">✓ Done</span>
+          </div>
+          <div className="todo-actions">
+            <button onClick={() => toggleCompleted(todo)}>Mark Incomplete</button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

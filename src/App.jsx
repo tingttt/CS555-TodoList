@@ -19,7 +19,7 @@ export default function App() {
     <div className={`d-flex flex-column vh-100 ${darkMode ? "dark-mode" : ""}`}>
       <Nav darkMode={darkMode} setDarkMode={setDarkMode} />
       <main className="flex-grow-1 overflow-auto">
-        <Container className="py-4">
+        <Container fluid className="py-4 px-4">
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Home />} />
