@@ -325,199 +325,145 @@ const Tasks = () => {
 
   return (
     <div>
-      <h1>Task Page</h1>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "13px", color: "#555" }}>Remind me about tasks due within:</span>
-        <select
-          value={reminderMode}
-          onChange={(e) => handleReminderModeChange(e.target.value)}
-          style={{ padding: "3px 8px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "13px" }}
-        >
-          {[1, 3, 5, 7].map((d) => (
-            <option key={d} value={String(d)}>{d} day{d > 1 ? "s" : ""}</option>
-          ))}
-          <option value="custom">Custom</option>
-        </select>
-        {reminderMode === "custom" && (
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            <input
-              type="number"
-              min="1"
-              value={customDays}
-              onChange={(e) => setCustomDays(e.target.value)}
-              placeholder="days"
-              style={{ width: "60px", padding: "3px 6px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "13px" }}
-            />
-            <button
-              onClick={handleCustomDaysSubmit}
-              style={{ padding: "3px 10px", borderRadius: "4px", background: "#667eea", color: "#fff", border: "none", fontSize: "13px", cursor: "pointer" }}
-            >
-              Set
-            </button>
-          </div>
-        )}
-        <span style={{ fontSize: "12px", color: "#999" }}>(currently: {reminderDays} day{reminderDays > 1 ? "s" : ""})</span>
-      </div>
+      <h1 className="page-title">My Tasks</h1>
 
       {notifications.length > 0 && (
-        <div style={{
-          background: "#fff3cd",
-          border: "1px solid #ffc107",
-          borderRadius: "8px",
-          padding: "12px 16px",
-          marginBottom: "16px",
-        }}>
-          <strong>⏰ Upcoming Deadlines:</strong>
-          <ul style={{ margin: "8px 0 0 0", paddingLeft: "20px" }}>
+        <div className="notification-banner">
+          <strong>⏰ Upcoming Deadlines</strong>
+          <ul>
             {notifications.map((todo) => (
-              <li key={todo.id}>
-                <strong>{todo.title}</strong> — due {todo.due}
-              </li>
+              <li key={todo.id}><strong>{todo.title}</strong> — due {todo.due}</li>
             ))}
           </ul>
         </div>
       )}
 
       {lastDeleted && (
-      <div style={{
-        background: "#d1ecf1",
-        border: "1px solid #bee5eb",
-        borderRadius: "8px",
-        padding: "10px 16px",
-        marginBottom: "16px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}>
-        <span>🗑 <strong>{lastDeleted.title}</strong> was deleted.</span>
-        <button onClick={undoDelete} style={{
-          background: "#17a2b8",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          padding: "6px 14px",
-          cursor: "pointer"
-        }}>Undo</button>
-      </div>
-    )}
-      <div style={{ marginBottom: "16px" }}>
-        <p>Overall Completion: {completionPercentage}%</p>
-        <div style={{
-          background: "#e0e0e0",
-          borderRadius: "8px",
-          height: "12px",
-          width: "100%"
-        }}>
-          <div style={{
-            background: completionPercentage === 100 ? "#28a745" : "#667eea",
-            width: `${completionPercentage}%`,
-            height: "100%",
-            borderRadius: "8px",
-            transition: "width 0.3s ease"
-          }} />
+        <div className="undo-banner">
+          <span>🗑 <strong>{lastDeleted.title}</strong> was deleted.</span>
+          <button className="btn-undo" onClick={undoDelete}>Undo</button>
         </div>
-      </div>
-      <div style={{ marginBottom: "16px" }}>
-        <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
-          {[
-            { label: "Total", value: todos.length },
-            { label: "Completed", value: completedCount },
-            { label: "Pending", value: pendingCount },
-          ].map(({ label, value }) => (
-            <div key={label} style={{
-              flex: 1, textAlign: "center", padding: "12px",
-              background: "#f5f5f5", borderRadius: "8px", border: "1px solid #ddd"
-            }}>
-              <div style={{ fontSize: "24px", fontWeight: "bold" }}>{value}</div>
-              <div style={{ fontSize: "13px", color: "#666" }}>{label}</div>
-            </div>
-          ))}
-        </div>
+      )}
 
-        <div style={{ display: "flex", gap: "12px" }}>
-          <div style={{ flex: 1 }}>
-            <strong style={{ fontSize: "13px" }}>By Priority</strong>
-            {priorityStats.map(({ label, total, done }) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "2px 0" }}>
-                <span style={{ textTransform: "capitalize" }}>{label}</span>
-                <span>{done} / {total}</span>
-              </div>
-            ))}
+      <div className="progress-wrap">
+        <div className="progress-label">
+          <span>Overall Completion</span>
+          <span>{completionPercentage}%</span>
+        </div>
+        <div className="progress-bar-bg">
+          <div className="progress-bar-fill" style={{ width: `${completionPercentage}%` }} />
+        </div>
+      </div>
+
+      <div className="stats-panel">
+        <div className="stats-grid">
+          <div className="stat-card stat-total">
+            <div className="stat-value">{todos.length}</div>
+            <div className="stat-label">Total</div>
           </div>
-          <div style={{ flex: 1 }}>
-            <strong style={{ fontSize: "13px" }}>By Category</strong>
-            {categoryStats.map(({ label, total, done }) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "2px 0" }}>
-                <span style={{ textTransform: "capitalize" }}>{label}</span>
-                <span>{done} / {total}</span>
-              </div>
-            ))}
+          <div className="stat-card stat-done">
+            <div className="stat-value">{completedCount}</div>
+            <div className="stat-label">Completed</div>
+          </div>
+          <div className="stat-card stat-pending">
+            <div className="stat-value">{pendingCount}</div>
+            <div className="stat-label">Pending</div>
+          </div>
+        </div>
+        <div className="breakdown-section">
+          <div className="breakdown-group">
+            <h4>By Priority</h4>
+            {[
+              { label: "high", color: "#ef4444" },
+              { label: "medium", color: "#f59e0b" },
+              { label: "low", color: "#22c55e" },
+            ].map(({ label, color }) => {
+              const stat = priorityStats.find((s) => s.label === label) || { total: 0, done: 0 };
+              return (
+                <div key={label} className="breakdown-row">
+                  <span className="breakdown-dot" style={{ background: color }} />
+                  <span className="breakdown-label">{label}</span>
+                  <div className="breakdown-bar-wrap">
+                    <div className="breakdown-bar" style={{ width: stat.total ? `${(stat.done / stat.total) * 100}%` : "0%", background: color }} />
+                  </div>
+                  <span className="breakdown-count">{stat.done}/{stat.total}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="breakdown-group">
+            <h4>By Category</h4>
+            {categoryStats.map(({ label, total, done }, i) => {
+              const colors = ["#6366f1", "#a855f7", "#ec4899", "#14b8a6", "#f97316"];
+              const color = colors[i % colors.length];
+              return (
+                <div key={label} className="breakdown-row">
+                  <span className="breakdown-dot" style={{ background: color }} />
+                  <span className="breakdown-label">{label}</span>
+                  <div className="breakdown-bar-wrap">
+                    <div className="breakdown-bar" style={{ width: total ? `${(done / total) * 100}%` : "0%", background: color }} />
+                  </div>
+                  <span className="breakdown-count">{done}/{total}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: "16px" }}>
-        {!myName ? (
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "13px" }}>Your name:</span>
-            <input
-              type="text"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              placeholder="Enter your name to filter shared tasks"
-              style={{ padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc" }}
-            />
-            <button onClick={saveName} style={{ padding: "4px 12px" }}>Save</button>
+      <div className="controls-bar">
+        <div className="controls-left">
+          <div className="controls-group">
+            <span className="controls-icon">🔔</span>
+            <label>Remind within</label>
+            <select value={reminderMode} onChange={(e) => handleReminderModeChange(e.target.value)}>
+              {[1, 3, 5, 7].map((d) => (<option key={d} value={String(d)}>{d} day{d > 1 ? "s" : ""}</option>))}
+              <option value="custom">Custom</option>
+            </select>
+            {reminderMode === "custom" && (
+              <>
+                <input type="number" min="1" value={customDays} onChange={(e) => setCustomDays(e.target.value)} placeholder="days" className="controls-days-input" />
+                <button className="controls-btn controls-btn--primary" onClick={handleCustomDaysSubmit}>Set</button>
+              </>
+            )}
           </div>
-        ) : (
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button
-              onClick={() => setShowMyTasks(false)}
-              style={{ padding: "4px 12px", background: !showMyTasks ? "#667eea" : "#e0e0e0", color: !showMyTasks ? "#fff" : "#333", border: "none", borderRadius: "4px" }}
-            >
-              All Tasks
-            </button>
-            <button
-              onClick={() => setShowMyTasks(true)}
-              style={{ padding: "4px 12px", background: showMyTasks ? "#667eea" : "#e0e0e0", color: showMyTasks ? "#fff" : "#333", border: "none", borderRadius: "4px" }}
-            >
-              My Tasks ({todos.filter((t) => !t.completed && t.assignedTo === myName).length})
-            </button>
-            <span style={{ fontSize: "13px", color: "#666" }}>Viewing as: {myName}</span>
-            <button onClick={() => { localStorage.removeItem("myName"); setMyName(""); setShowMyTasks(false); }} style={{ fontSize: "12px", color: "#999", background: "none", border: "none", cursor: "pointer" }}>change</button>
+          <div className="controls-group">
+            <button className="controls-btn controls-btn--outline" onClick={exportTasks}>↑ Export</button>
+            <button className="controls-btn controls-btn--outline" onClick={() => { setShowImport(!showImport); setImportError(""); }}>↓ Import</button>
           </div>
-        )}
-      </div>
-
-      <div style={{ marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button onClick={exportTasks} style={{ padding: "6px 14px", borderRadius: "4px", border: "1px solid #667eea", color: "#667eea", background: "none", cursor: "pointer" }}>
-            Export Tasks
-          </button>
-          <button onClick={() => { setShowImport(!showImport); setImportError(""); }} style={{ padding: "6px 14px", borderRadius: "4px", border: "1px solid #667eea", color: "#667eea", background: "none", cursor: "pointer" }}>
-            Import Tasks
-          </button>
         </div>
+
+        <div className="controls-right">
+          {!myName ? (
+            <>
+              <input className="controls-name-input" type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Your name for shared tasks" />
+              <button className="controls-btn controls-btn--primary" onClick={saveName}>Save</button>
+            </>
+          ) : (
+            <>
+              <button className={`controls-btn ${!showMyTasks ? "controls-btn--primary" : "controls-btn--ghost"}`} onClick={() => setShowMyTasks(false)}>All Tasks</button>
+              <button className={`controls-btn ${showMyTasks ? "controls-btn--primary" : "controls-btn--ghost"}`} onClick={() => setShowMyTasks(true)}>
+                My Tasks ({todos.filter((t) => !t.completed && t.assignedTo === myName).length})
+              </button>
+              <button className="controls-btn controls-btn--text" onClick={() => { localStorage.removeItem("myName"); setMyName(""); setShowMyTasks(false); }}>change</button>
+            </>
+          )}
+        </div>
+
         {showImport && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <textarea
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder="Paste exported JSON here..."
-              rows={5}
-              style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc", fontFamily: "monospace", fontSize: "12px" }}
-            />
-            {importError && <span style={{ color: "red", fontSize: "13px" }}>{importError}</span>}
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={importTasks} style={{ padding: "4px 12px", background: "#667eea", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>Confirm Import</button>
-              <button onClick={() => { setShowImport(false); setImportError(""); }} style={{ padding: "4px 12px", background: "#e0e0e0", border: "none", borderRadius: "4px", cursor: "pointer" }}>Cancel</button>
+          <div className="controls-import">
+            <textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder="Paste exported JSON here..." rows={4} />
+            {importError && <span className="controls-import-error">{importError}</span>}
+            <div className="controls-import-actions">
+              <button className="controls-btn controls-btn--primary" onClick={importTasks}>Confirm Import</button>
+              <button className="controls-btn controls-btn--ghost" onClick={() => { setShowImport(false); setImportError(""); }}>Cancel</button>
             </div>
           </div>
         )}
       </div>
 
-      <AddTodo addTodo={addTodo} />
-      <div className="lists-container">
+      <div className="three-col-layout">
+        <AddTodo addTodo={addTodo} />
         <TodoList
           todos={getSortedTodos().filter((todo) =>
             (todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

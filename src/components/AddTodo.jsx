@@ -1,26 +1,22 @@
-// src/components/AddTodo.jsx
 import React, { useState } from "react";
 import validation from "../utils/validation";
 
 const AddTodo = ({ addTodo }) => {
-    const getToday = () => {
-    const today = new Date();
-    return today.toISOString().split("T")[0]; // yyyy-mm-dd
-  };
+  const getToday = () => new Date().toISOString().split("T")[0];
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [due, setDue] = useState(getToday());
   const [priority, setPriority] = useState("low");
   const [category, setCategory] = useState("");
-  const [error, setError] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
-
+  const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError(""); // Clear previous
+    setError("");
+
     const convertDateFormat = (dateString) => {
-      // Convert yyyy-mm-dd to mm/dd/yyyy
       const [year, month, day] = dateString.split("-");
       return `${month}/${day}/${year}`;
     };
@@ -29,7 +25,6 @@ const AddTodo = ({ addTodo }) => {
       const validatedTitle = validation.checkTitle(title);
       const formattedDue = convertDateFormat(due);
       const validatedDescription = validation.checkDescription(description);
-
       const validatedDate = validation.checkDate(formattedDue, "Due Date");
 
       const today = new Date();
@@ -38,113 +33,62 @@ const AddTodo = ({ addTodo }) => {
       const dueDate = new Date(y, m - 1, d);
       dueDate.setHours(0, 0, 0, 0);
 
-      if (dueDate < today) {
-        throw new Error("Due date must be today or in the future.");
-      }
+      if (dueDate < today) throw new Error("Due date must be today or in the future.");
 
-      // Create todo object
-      const newTodo = {
-        title: validatedTitle,
-        description: validatedDescription,
-        due: validatedDate,
-        priority: priority,
-        category: category,
-        assignedTo: assignedTo, 
-        completed: false,
-      };
-      
-      console.log("newTodo:", newTodo);
-      addTodo(newTodo);
+      addTodo({ title: validatedTitle, description: validatedDescription, due: validatedDate, priority, category, assignedTo, completed: false });
 
-      // Reset form input after successful submission and ad new todo
-      setTitle("");
-      setDescription("");
-      setDue(getToday());
-      setPriority("low");
-      setCategory("");
-      setError("");
-      setAssignedTo("");
+      setTitle(""); setDescription(""); setDue(getToday());
+      setPriority("low"); setCategory(""); setAssignedTo(""); setError("");
     } catch (err) {
       setError(err.message);
     }
-
-    
   };
 
   return (
-    <div>
-      <h2>Add New Todo</h2>
-      {error ? <p style={{ color: "red" }}>{error}</p> : null}
+    <div className="add-todo-card">
+      <h2>Add New Task</h2>
+      {error && <p className="form-error">{error}</p>}
       <form onSubmit={handleSubmit}>
-        <div>
-          <label>Title: </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+        <div className="form-group">
+          <label>Title</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title..." required />
         </div>
-
-        <div>
-          <label>Description: </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
+        <div className="form-group">
+          <label>Description</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What needs to be done?" required />
         </div>
-        <div>
-          <label>Due Date: </label>
-          <input
-            type="date"
-            value={due}
-            onChange={(e) => setDue(e.target.value)}
-            min={getToday()}
-            required
-          />
+        <div className="form-row">
+          <div className="form-group">
+            <label>Due Date</label>
+            <input type="date" value={due} onChange={(e) => setDue(e.target.value)} min={getToday()} required />
+          </div>
+          <div className="form-group">
+            <label>Priority</label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} required>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label htmlFor="priority">Priority </label>
-          <select id="priority" name="priority" value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-            required
-          >
-            <option value="low">Low Priority</option>
-            <option value="medium">Medium Priority</option>
-            <option value="high">High Priority</option>
-
-          </select>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} required>
+              <option value="">Select a category</option>
+              <option value="work">Work</option>
+              <option value="personal">Personal</option>
+              <option value="health">Health</option>
+              <option value="finance">Finance</option>
+              <option value="learn">Learning</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Assign To</label>
+            <input type="text" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} placeholder="Enter name..." />
+          </div>
         </div>
-        <div>
-          <label htmlFor="category">Category </label>
-          <select
-            id="category" name="category"
-            type="date"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-          >
-            <option value="">Select a Category</option>
-            <option value="work">Work</option>
-            <option value="personal">Personal</option>
-            <option value="health">Health</option>
-            <option value="finance">Finance</option>
-            <option value="learn">Learning</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Assign To: </label>
-          <input
-            type="text"
-            value={assignedTo}
-            onChange={(e) => setAssignedTo(e.target.value)}
-            placeholder="Enter name..."
-          />
-        </div>
-
-        <button type="submit">Add Todo</button>
+        <button type="submit" className="btn-submit">Add Task</button>
       </form>
     </div>
   );
