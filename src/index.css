@@ -840,6 +840,32 @@ footer.bg-dark {
   border: 1px solid #fecaca;
 }
 
+.field-footer {
+  min-height: 18px;
+  margin-top: 4px;
+}
+
+.field-error {
+  display: block;
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.field-hint {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.form-group input.input-error,
+.form-group textarea.input-error,
+.form-group select.input-error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+  background: #fff8f8;
+}
+
 /* ── Notification banner ── */
 .notification-banner {
   background: linear-gradient(135deg, #fefce8, #fef9c3);
