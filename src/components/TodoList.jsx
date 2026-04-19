@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useRef } from "react";
 import validation from "../utils/validation";
-const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery, filterPriority, setFilterPriority, filterCategory, setFilterCategory, selectedIds, setSelectedIds, bulkComplete, bulkDelete }) => {
+const TodoList = ({ todos, deleteTodo, toggleCompleted, editTask, sortBy, setSortBy, searchQuery, setSearchQuery, filterPriority, setFilterPriority, filterCategory, setFilterCategory, selectedIds, setSelectedIds, bulkComplete, bulkDelete, reorderTodos }) => {
+  const dragId = useRef(null);
   const visibleIncomplete = todos.filter((t) => !t.completed);
   const allSelected = visibleIncomplete.length > 0 && visibleIncomplete.every((t) => selectedIds.includes(t.id));
 
@@ -150,7 +151,15 @@ const isPastDue = (due) => {
         .map((todo) => {
           const overdue = isPastDue(todo.due);
           return (
-            <div key={todo.id} className={`todo ${overdue ? "todo--overdue" : ""}`} style={{ position: "relative" }}>
+            <div
+              key={todo.id}
+              className={`todo ${overdue ? "todo--overdue" : ""}`}
+              style={{ position: "relative", cursor: "grab" }}
+              draggable
+              onDragStart={() => { dragId.current = todo.id; }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => { reorderTodos(dragId.current, todo.id); dragId.current = null; }}
+            >
               <input
                 type="checkbox"
                 checked={selectedIds.includes(todo.id)}

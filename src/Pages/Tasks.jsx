@@ -143,6 +143,19 @@ const Tasks = () => {
 
   const [selectedIds, setSelectedIds] = useState([]);
 
+  const reorderTodos = (fromId, toId) => {
+    const list = getSortedTodos().filter((t) => !t.completed);
+    const fromIdx = list.findIndex((t) => t.id === fromId);
+    const toIdx = list.findIndex((t) => t.id === toId);
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+    const reordered = [...list];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    const completedTodos = todos.filter((t) => t.completed);
+    setTodos([...reordered, ...completedTodos]);
+    handleSortChange("none");
+  };
+
   const bulkComplete = () => {
     setTodos(todos.map((t) => selectedIds.includes(t.id) ? { ...t, completed: true } : t));
     setSelectedIds([]);
@@ -528,6 +541,7 @@ const Tasks = () => {
             setSelectedIds={setSelectedIds}
             bulkComplete={bulkComplete}
             bulkDelete={bulkDelete}
+            reorderTodos={reorderTodos}
         />
 
         <CompletedTodos todos={todos} toggleCompleted={toggleCompleted} />
