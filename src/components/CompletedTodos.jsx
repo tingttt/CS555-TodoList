@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import validation from '../utils/validation';
 
 function NoteField({ todo, onSaved }) {
   const { API } = useAuth();
@@ -21,92 +22,85 @@ function NoteField({ todo, onSaved }) {
   };
 
   return (
-    <div style={{ marginTop: '10px' }}>
+    <div style={{ marginTop: '12px' }}>
       {!open ? (
         <button
           onClick={() => setOpen(true)}
-          style={{ padding: '4px 14px', background: 'none', border: '1px solid #aaa', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', color: '#555' }}
+          style={{ padding: '5px 14px', background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)', fontFamily: 'inherit' }}
         >
           {todo.notes ? '📝 Edit Note' : '+ Add Note'}
         </button>
       ) : (
         <div>
           <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            placeholder="Write a note…"
-            autoFocus
-            style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box', display: 'block' }}
+            value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+            placeholder="Write a note…" autoFocus
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box', display: 'block', fontFamily: 'inherit', background: 'var(--surface-2)', color: 'var(--text)', outline: 'none' }}
           />
-          <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{ padding: '4px 14px', background: '#667eea', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-            >
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button onClick={handleSave} disabled={saving} className="btn-submit" style={{ padding: '6px 16px', fontSize: '0.82rem', marginTop: 0 }}>
               {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save'}
             </button>
             <button
               onClick={() => { setOpen(false); setNote(todo.notes || ''); }}
-              style={{ padding: '4px 14px', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', color: '#555' }}
+              style={{ padding: '6px 14px', background: 'var(--surface-2)', border: '1.5px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)', fontFamily: 'inherit' }}
             >
               Cancel
             </button>
           </div>
         </div>
       )}
-      {/* Show saved note preview when collapsed */}
       {!open && todo.notes && (
-        <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#555', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>📝 {todo.notes}</p>
+        <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>📝 {todo.notes}</p>
       )}
     </div>
   );
 }
 
+const fmt = (fn, val) => { try { return fn(val); } catch { return val; } };
+
 const CompletedTodos = ({ todos, toggleCompleted, onTaskUpdated }) => {
-  const completedTodos = todos.filter((todo) => todo.completed);
+  const completedTodos = todos.filter((t) => t.completed);
   if (completedTodos.length === 0) return null;
 
   return (
     <div className="completedTodos">
-      <h2>Completed Todos</h2>
+      <h2>Completed ({completedTodos.length})</h2>
       {completedTodos.map((todo) => {
         const isSharedWithMe = !!todo._sharedWithMe;
         return (
           <div
             key={todo._id}
-            className="todo todo--completed"
-            style={{
-              opacity: 0.8,
-              background: isSharedWithMe ? '#f0fafa' : undefined,
-              borderLeft: isSharedWithMe ? '4px solid #20c997' : undefined,
-              position: 'relative',
-            }}
+            className={`todo todo--completed${isSharedWithMe ? ' shared-with-me' : ''}`}
           >
             {isSharedWithMe && (
-              <span style={{
-                position: 'absolute', top: '10px', right: '10px',
-                background: '#20c997', color: '#fff',
-                fontSize: '10px', fontWeight: '700', letterSpacing: '0.5px',
-                padding: '2px 7px', borderRadius: '10px', textTransform: 'uppercase',
-              }}>Shared</span>
+              <span className="badge badge-shared" style={{ position: 'absolute', top: '12px', right: '12px' }}>Shared</span>
             )}
-            <h1 style={{ textDecoration: 'line-through' }}>{todo.title}</h1>
+            <h1 style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>
+              {fmt(validation.checkTitle, todo.title)}
+            </h1>
             {isSharedWithMe && todo.ownerName && (
-              <p style={{ fontSize: '12px', color: '#20c997', fontWeight: '600', margin: '0 0 6px' }}>Shared by {todo.ownerName}</p>
+              <p style={{ fontSize: '0.8rem', color: '#0f766e', fontWeight: 600, margin: '0 0 6px' }}>
+                Shared by {todo.ownerName}
+              </p>
             )}
-            {todo.description && <p>{todo.description}</p>}
-            {todo.due && <p>Due: {todo.due}</p>}
-            {todo.priority && <p>Priority: {todo.priority}</p>}
-            {todo.category && <p>Category: {todo.category}</p>}
-            {todo.assignedTo?.name && (
-              <p>Assigned To: <strong>{todo.assignedTo.name}</strong> <span style={{ fontSize: '12px', color: '#888' }}>({todo.assignedTo.email})</span></p>
+            {!isSharedWithMe && todo.creatorName && (
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 6px' }}>
+                Created by <strong>{todo.creatorName}</strong>
+              </p>
             )}
-            <p>Completed: Yes ✅</p>
-            <button onClick={() => toggleCompleted(todo)}>Uncomplete</button>
-            {/* Notes only on own tasks */}
-            {!isSharedWithMe && <NoteField todo={todo} onSaved={onTaskUpdated} />}
+            <p>{fmt(validation.checkDescription, todo.description)}</p>
+            <div className="todo-meta">
+              {todo.due && <span className="due-date-badge">📅 {fmt((d) => validation.checkDate(d, 'Due Date'), todo.due)}</span>}
+              {todo.priority && <span className={`badge badge-${todo.priority}`}>{todo.priority}</span>}
+              {todo.category && <span className="badge badge-category">{todo.category}</span>}
+              {todo.assignedTo?.name && <span className="badge badge-assigned">👤 {todo.assignedTo.name}</span>}
+              <span className="badge badge-done">✓ Done</span>
+            </div>
+            <div className="todo-actions">
+              <button onClick={() => toggleCompleted(todo)}>Mark Incomplete</button>
+              {!isSharedWithMe && onTaskUpdated && <NoteField todo={todo} onSaved={onTaskUpdated} />}
+            </div>
           </div>
         );
       })}

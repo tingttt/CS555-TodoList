@@ -15,6 +15,7 @@ export function AuthProvider({ children }) {
       .get(`${API}/api/auth/me`)
       .then((res) => {
         if (res.data.authenticated) {
+          // res.data has: { authenticated, userId, name, email, ... }
           setUser({ ...res.data });
         }
       })
@@ -24,7 +25,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (name, email, password) => {
     const res = await axios.post(`${API}/api/auth/signup`, { name, email, password });
-    setUser({ ...res.data.user, userId: res.data.user._id });
+    setUser({ ...res.data.user });
     return res.data;
   };
 

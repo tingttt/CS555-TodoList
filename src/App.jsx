@@ -3,6 +3,7 @@ import Calendar from "./Pages/Calendar";
 import Home from "./Pages/Home";
 import Tasks from "./Pages/Tasks";
 import Settings from "./Pages/Settings";
+import InviteAccept from "./Pages/InviteAccept";
 import Nav from './components/Nav';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/signin" element={<Signin />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/task" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/shared/:taskId" element={<ProtectedRoute><InviteAccept /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
           </Routes>
