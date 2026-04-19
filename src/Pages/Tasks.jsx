@@ -132,8 +132,30 @@ const Tasks = () => {
   // ── CRUD ───────────────────────────────────────────────────────────────────
   const addTodo = async (newTodo) => {
     try {
-      await axios.post(`${API}/api/tasks`, newTodo);
-      // socket task:created handles state update
+      const { recurEvery, recurTimes, due, ...base } = newTodo;
+
+      if (recurEvery && recurTimes && recurTimes > 1) {
+        // Parse the starting due date (mm/dd/yyyy)
+        const [m, d, y] = due.split("/").map(Number);
+        const startDate = new Date(y, m - 1, d);
+
+        // Create all recurring tasks in sequence
+        for (let i = 0; i < recurTimes; i++) {
+          const taskDate = new Date(startDate);
+          taskDate.setDate(taskDate.getDate() + recurEvery * i);
+          const mm = String(taskDate.getMonth() + 1).padStart(2, "0");
+          const dd = String(taskDate.getDate()).padStart(2, "0");
+          const yyyy = taskDate.getFullYear();
+          await axios.post(`${API}/api/tasks`, {
+            ...base,
+            due: `${mm}/${dd}/${yyyy}`,
+            title: recurTimes > 1 ? `${base.title} (${i + 1}/${recurTimes})` : base.title,
+          });
+        }
+      } else {
+        await axios.post(`${API}/api/tasks`, { ...base, due });
+      }
+      // socket task:created handles state update for each task
     } catch (err) {
       alert(err.response?.data?.message || "Failed to add task.");
     }
@@ -626,12 +648,15 @@ const EditTaskModal = ({ task, onSave, onCancel, API, currentUser, comments = []
           )}
 
           {/* Comments section — owner can delete any comment, no editing allowed */}
-          {comments.length > 0 && (
+          {(
             <div style={{ marginBottom: "16px" }}>
               <p style={{ fontSize: "13px", fontWeight: "600", color: "#555", marginBottom: "8px" }}>
                 Comments ({comments.length})
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "200px", overflowY: "auto" }}>
+                {comments.length === 0 && (
+                  <p style={{ fontSize: "13px", color: "#aaa", margin: 0 }}>No comments yet.</p>
+                )}
                 {comments.map((c) => (
                   <div key={c._id} style={{ background: "#f7f7fb", borderRadius: "8px", padding: "8px 12px", position: "relative" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>

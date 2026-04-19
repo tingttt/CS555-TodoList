@@ -24,6 +24,9 @@ const AddTodo = ({ addTodo }) => {
   const [sharedWith, setSharedWith] = useState([]);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurEvery, setRecurEvery] = useState(1);   // every X days
+  const [recurTimes, setRecurTimes] = useState(2);   // repeat Y times (total Y tasks)
 
   const validateField = (name, value) => {
     try {
@@ -73,11 +76,14 @@ const AddTodo = ({ addTodo }) => {
       isShared,
       sharedWith: sharedWith.map((u) => ({ userId: u._id, name: u.name, email: u.email })),
       completed: false,
+      // Recurring fields — only sent when enabled
+      ...(isRecurring && { recurEvery: Number(recurEvery), recurTimes: Number(recurTimes) }),
     });
 
     setTitle(""); setDescription(""); setDue(getToday());
     setPriority("low"); setCategory("");
     setAssignedTo(selfUser); setIsShared(false); setSharedWith([]);
+    setIsRecurring(false); setRecurEvery(1); setRecurTimes(2);
     setErrors({}); setTouched({});
   };
 
@@ -207,7 +213,47 @@ const AddTodo = ({ addTodo }) => {
           </div>
         )}
 
-        <button type="submit" className="btn-submit">Add Task</button>
+        {/* Recurring */}
+        <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: "10px" }}>
+          <input
+            type="checkbox" id="isRecurring" checked={isRecurring}
+            onChange={(e) => setIsRecurring(e.target.checked)}
+            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--primary)" }}
+          />
+          <label htmlFor="isRecurring" style={{ textTransform: "none", fontSize: "0.9rem", letterSpacing: 0, cursor: "pointer", marginBottom: 0 }}>
+            Recurring task
+          </label>
+        </div>
+
+        {isRecurring && (
+          <div style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "16px", marginBottom: "16px" }}>
+            <div className="form-row">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Repeat every (days)</label>
+                <input
+                  type="number" min="1" max="365" value={recurEvery}
+                  onChange={(e) => setRecurEvery(Math.max(1, parseInt(e.target.value) || 1))}
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1.5px solid var(--border)", fontSize: "0.95rem", fontFamily: "inherit", background: "var(--surface)", color: "var(--text)", outline: "none" }}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Number of tasks</label>
+                <input
+                  type="number" min="2" max="52" value={recurTimes}
+                  onChange={(e) => setRecurTimes(Math.max(2, parseInt(e.target.value) || 2))}
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1.5px solid var(--border)", fontSize: "0.95rem", fontFamily: "inherit", background: "var(--surface)", color: "var(--text)", outline: "none" }}
+                />
+              </div>
+            </div>
+            <p style={{ margin: "10px 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              Will create <strong>{recurTimes}</strong> tasks starting {due ? new Date(due + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "today"}, every <strong>{recurEvery}</strong> day{recurEvery > 1 ? "s" : ""} — ending {(() => { try { const d = new Date(due + "T00:00:00"); d.setDate(d.getDate() + recurEvery * (recurTimes - 1)); return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); } catch { return ""; } })()}
+            </p>
+          </div>
+        )}
+
+        <button type="submit" className="btn-submit">
+          {isRecurring ? `Add ${recurTimes} Tasks` : "Add Task"}
+        </button>
       </form>
     </div>
   );
