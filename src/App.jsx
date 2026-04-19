@@ -10,10 +10,19 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container } from 'react-bootstrap';
 import Signin from "./Pages/Signin";
 import Signup from "./Pages/Signup";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "./context/AuthContext";
 
 export default function App() {
+  const { user } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
+
+  // Sync darkMode from user profile when user loads
+  useEffect(() => {
+    if (user?.darkMode !== undefined) {
+      setDarkMode(user.darkMode);
+    }
+  }, [user?.darkMode]);
 
   return (
     <div className={`d-flex flex-column vh-100 ${darkMode ? "dark-mode" : ""}`}>
@@ -21,23 +30,12 @@ export default function App() {
       <main className="flex-grow-1 overflow-auto">
         <Container className="py-4">
           <Routes>
-            {/* Public routes */}
             <Route path="/" element={<Home />} />
             <Route path="/signin" element={<Signin />} />
             <Route path="/signup" element={<Signup />} />
-
-            {/* Protected routes — redirects to /signin if not authenticated */}
-            <Route path="/task" element={
-              <ProtectedRoute><Tasks /></ProtectedRoute>
-            } />
-            <Route path="/calendar" element={
-              <ProtectedRoute><Calendar /></ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <Settings darkMode={darkMode} setDarkMode={setDarkMode} />
-              </ProtectedRoute>
-            } />
+            <Route path="/task" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
           </Routes>
         </Container>
       </main>

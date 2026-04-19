@@ -18,6 +18,23 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // Profile preferences stored in DB
+    reminderDays: {
+      type: Number,
+      default: 3,
+    },
+    myName: {
+      type: String,
+      default: '',
+    },
+    darkMode: {
+      type: Boolean,
+      default: false,
+    },
+    sortBy: {
+      type: String,
+      default: 'smart',
+    },
   },
   { timestamps: true }
 );
