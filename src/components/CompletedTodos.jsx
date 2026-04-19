@@ -2,65 +2,14 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import validation from '../utils/validation';
-
-function NoteField({ todo, onSaved }) {
-  const { API } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [note, setNote] = useState(todo.notes || '');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await axios.patch(`${API}/api/tasks/${todo._id}`, { notes: note });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      onSaved({ ...todo, notes: note });
-    } catch { alert('Failed to save note.'); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div style={{ marginTop: '12px' }}>
-      {!open ? (
-        <button
-          onClick={() => setOpen(true)}
-          style={{ padding: '5px 14px', background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)', fontFamily: 'inherit' }}
-        >
-          {todo.notes ? '📝 Edit Note' : '+ Add Note'}
-        </button>
-      ) : (
-        <div>
-          <textarea
-            value={note} onChange={(e) => setNote(e.target.value)} rows={3}
-            placeholder="Write a note…" autoFocus
-            style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box', display: 'block', fontFamily: 'inherit', background: 'var(--surface-2)', color: 'var(--text)', outline: 'none' }}
-          />
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-            <button onClick={handleSave} disabled={saving} className="btn-submit" style={{ padding: '6px 16px', fontSize: '0.82rem', marginTop: 0 }}>
-              {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save'}
-            </button>
-            <button
-              onClick={() => { setOpen(false); setNote(todo.notes || ''); }}
-              style={{ padding: '6px 14px', background: 'var(--surface-2)', border: '1.5px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)', fontFamily: 'inherit' }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-      {!open && todo.notes && (
-        <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>📝 {todo.notes}</p>
-      )}
-    </div>
-  );
-}
+import CommentThread from './CommentThread';
 
 const fmt = (fn, val) => { try { return fn(val); } catch { return val; } };
 
-const CompletedTodos = ({ todos, toggleCompleted, onTaskUpdated }) => {
+const CompletedTodos = ({ todos, toggleCompleted, onCommentAdded, onCommentDeleted, currentUserId, editTask }) => {
+  const { API } = useAuth();
   const completedTodos = todos.filter((t) => t.completed);
+  const [openComments, setOpenComments] = useState({});
   if (completedTodos.length === 0) return null;
 
   return (
@@ -68,6 +17,11 @@ const CompletedTodos = ({ todos, toggleCompleted, onTaskUpdated }) => {
       <h2>Completed ({completedTodos.length})</h2>
       {completedTodos.map((todo) => {
         const isSharedWithMe = !!todo._sharedWithMe;
+        const myId = currentUserId?.toString();
+        const isTaskOwnerOrAssignee = !isSharedWithMe && (
+          todo.userId?.toString() === myId ||
+          (todo.assignedTo?.userId && todo.assignedTo.userId.toString() === myId)
+        );
         return (
           <div
             key={todo._id}
@@ -99,8 +53,27 @@ const CompletedTodos = ({ todos, toggleCompleted, onTaskUpdated }) => {
             </div>
             <div className="todo-actions">
               <button onClick={() => toggleCompleted(todo)}>Mark Incomplete</button>
-              {!isSharedWithMe && onTaskUpdated && <NoteField todo={todo} onSaved={onTaskUpdated} />}
+              {isTaskOwnerOrAssignee && editTask && (
+                <button className="editbutton" onClick={() => editTask(todo)}>Edit</button>
+              )}
+              <button
+                className="commentbutton"
+                onClick={() => setOpenComments((p) => ({ ...p, [todo._id]: !p[todo._id] }))}
+              >
+                💬 {(todo.comments || []).length} {openComments[todo._id] ? '▲' : '▼'}
+              </button>
             </div>
+
+            {openComments[todo._id] && (
+              <CommentThread
+                taskId={todo._id}
+                comments={todo.comments || []}
+                taskOwnerId={isSharedWithMe ? todo.userId : currentUserId}
+                ownerCanDelete={isTaskOwnerOrAssignee}
+                onAdd={(text) => onCommentAdded && onCommentAdded(todo._id, text)}
+                onDelete={(commentId) => onCommentDeleted && onCommentDeleted(todo._id, commentId)}
+              />
+            )}
           </div>
         );
       })}

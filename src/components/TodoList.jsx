@@ -135,6 +135,12 @@ const TodoList = ({
         const isSharedWithMe = !!todo._sharedWithMe;
         const isSharedOut    = !isSharedWithMe && todo.isShared && todo.sharedWith?.length > 0;
         const showComments   = !!openComments[todo._id];
+        // Can edit if you are the creator OR the assigned user
+        const myId = user?.userId?.toString();
+        const isTaskOwnerOrAssignee = !isSharedWithMe && (
+          todo.userId?.toString() === myId ||
+          (todo.assignedTo?.userId && todo.assignedTo.userId.toString() === myId)
+        );
 
         const cardClasses = [
           "todo",
@@ -202,8 +208,8 @@ const TodoList = ({
             </div>
 
             <div className="todo-actions">
-              {/* Delete — owner only */}
-              {!isSharedWithMe && (
+              {/* Delete — creator or assigned user only */}
+              {isTaskOwnerOrAssignee && (
                 <button
                   className="deletebutton"
                   onClick={() => { if (window.confirm(`Delete "${todo.title}"?`)) deleteTodo(todo._id); }}
@@ -214,8 +220,8 @@ const TodoList = ({
 
               <button onClick={() => toggleCompleted(todo)}>Complete</button>
 
-              {/* Edit — owner only */}
-              {!isSharedWithMe && (
+              {/* Edit — creator or assigned user only */}
+              {isTaskOwnerOrAssignee && (
                 <button className="editbutton" onClick={() => editTask(todo)}>Edit</button>
               )}
 
@@ -234,6 +240,7 @@ const TodoList = ({
                 taskId={todo._id}
                 comments={todo.comments || []}
                 taskOwnerId={isSharedWithMe ? todo.userId : user?.userId}
+                ownerCanDelete={isTaskOwnerOrAssignee}
                 onAdd={(text) => handleAddComment(todo._id, text)}
                 onDelete={(commentId) => handleDeleteComment(todo._id, commentId)}
               />

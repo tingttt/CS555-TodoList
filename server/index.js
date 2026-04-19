@@ -190,7 +190,13 @@ app.get('/api/users/search', requireAuth, async (req, res) => {
 app.get('/api/tasks', requireAuth, async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.session.userId }).sort({ order: 1, createdAt: 1 });
-    return res.json(tasks);
+    // Normalise: ensure every task has a comments array (backfills old docs without it)
+    const normalised = tasks.map((t) => {
+      const obj = t.toObject();
+      if (!obj.comments) obj.comments = [];
+      return obj;
+    });
+    return res.json(normalised);
   } catch (err) {
     return res.status(500).json({ message: 'Server error.' });
   }
@@ -215,7 +221,8 @@ app.get('/api/tasks/shared-with-me', requireAuth, async (req, res) => {
       ownerName: ownerMap[t.userId.toString()] || 'Someone',
     }));
 
-    return res.json(tasksWithOwner);
+    const normalisedShared = tasksWithOwner.map((t) => ({ ...t, comments: t.comments || [] }));
+    return res.json(normalisedShared);
   } catch (err) {
     return res.status(500).json({ message: 'Server error.' });
   }
@@ -274,10 +281,13 @@ app.patch('/api/tasks/:id', requireAuth, async (req, res) => {
     });
     if (!task) return res.status(404).json({ message: 'Task not found.' });
 
-    const isOwner = task.userId.toString() === req.session.userId.toString();
+    const requesterId = req.session.userId.toString();
+    // Owner = creator OR the assigned user (if set, otherwise creator is assigned by default)
+    const isOwner = task.userId.toString() === requesterId ||
+      (task.assignedTo?.userId && task.assignedTo.userId.toString() === requesterId);
 
     if (isOwner) {
-      // Owner can edit everything
+      // Owner/assignee can edit everything
       const allowed = ['title', 'description', 'due', 'priority', 'category', 'completed', 'order', 'isShared', 'sharedWith', 'notes'];
       allowed.forEach((field) => { if (req.body[field] !== undefined) task[field] = req.body[field]; });
       if (req.body.assignedTo !== undefined) {
@@ -384,6 +394,8 @@ app.post('/api/tasks/:id/comments', requireAuth, async (req, res) => {
     const { text } = req.body;
     if (!text?.trim()) return res.status(400).json({ message: 'Comment cannot be empty.' });
     const user = await User.findById(req.session.userId).select('name');
+    // Guard: older documents in MongoDB may not have the comments array yet
+    if (!task.comments) task.comments = [];
     task.comments.push({ userId: req.session.userId, name: user.name, text: text.trim() });
     await task.save();
     const newComment = task.comments[task.comments.length - 1];
@@ -411,10 +423,14 @@ app.delete('/api/tasks/:id/comments/:commentId', requireAuth, async (req, res) =
   try {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found.' });
+    if (!task.comments) task.comments = [];
     const comment = task.comments.id(req.params.commentId);
     if (!comment) return res.status(404).json({ message: 'Comment not found.' });
-    // Spec: comments cannot be deleted by shared members (others); only by the comment author
-    if (comment.userId.toString() !== req.session.userId.toString())
+    // Task owner can delete any comment; other users can only delete their own
+    const requesterId = req.session.userId.toString();
+    const isTaskOwner = task.userId.toString() === requesterId;
+    const isCommentAuthor = comment.userId.toString() === requesterId;
+    if (!isTaskOwner && !isCommentAuthor)
       return res.status(403).json({ message: 'You can only delete your own comments.' });
     comment.deleteOne();
     await task.save();

@@ -161,13 +161,25 @@ const Tasks = () => {
   };
 
   const toggleCompleted = async (todo) => {
-    const isSharedWithMe = sharedWithMe.find((t) => t._id === todo._id);
-    const setter = isSharedWithMe ? setSharedWithMe : setTodos;
-    setter((prev) => prev.map((t) => t._id === todo._id ? { ...t, completed: !todo.completed } : t));
+    // Use the _sharedWithMe flag directly — re-looking up in sharedWithMe state fails
+    // for completed tasks because they are stripped of the flag during filtering
+    const isSharedWithMe = !!todo._sharedWithMe;
+    const setterOwn    = (fn) => setTodos(fn);
+    const setterShared = (fn) => setSharedWithMe(fn);
+
+    // Optimistic update on both lists (task could be in either)
+    const applyUpdate = (prev) =>
+      prev.map((t) => t._id === todo._id ? { ...t, completed: !todo.completed } : t);
+    setTodos(applyUpdate);
+    setSharedWithMe(applyUpdate);
+
     try {
       await axios.patch(`${API}/api/tasks/${todo._id}`, { completed: !todo.completed });
     } catch {
-      setter((prev) => prev.map((t) => t._id === todo._id ? todo : t));
+      // Rollback both lists on failure
+      const revert = (prev) => prev.map((t) => t._id === todo._id ? { ...t, completed: todo.completed } : t);
+      setTodos(revert);
+      setSharedWithMe(revert);
     }
   };
 
@@ -299,7 +311,28 @@ const Tasks = () => {
 
       {/* Edit modal */}
       {editingTask && (
-        <EditTaskModal task={editingTask} onSave={saveEditedTask} onCancel={() => setEditingTask(null)} API={API} currentUser={user} />
+        <EditTaskModal
+          task={editingTask}
+          onSave={saveEditedTask}
+          onCancel={() => setEditingTask(null)}
+          API={API}
+          currentUser={user}
+          onDeleteComment={async (commentId) => {
+            try {
+              await axios.delete(`${API}/api/tasks/${editingTask._id}/comments/${commentId}`);
+              // socket task:comment-deleted keeps editingTask.comments in sync via state
+            } catch (err) {
+              alert(err.response?.data?.message || 'Failed to delete comment.');
+            }
+          }}
+          comments={
+            // Always use live comments from state so the modal stays in sync after deletes
+            (todos.find((t) => t._id === editingTask._id) ||
+             sharedWithMe.find((t) => t._id === editingTask._id) ||
+             editingTask
+            ).comments || []
+          }
+        />
       )}
 
       {/* Controls bar — reminders + export/import */}
@@ -438,9 +471,19 @@ const Tasks = () => {
         <CompletedTodos
           todos={[...todos, ...sharedWithMe.map((t) => ({ ...t, _sharedWithMe: true }))]}
           toggleCompleted={toggleCompleted}
-          onTaskUpdated={(updated) => {
-            setTodos((prev) => prev.map((t) => t._id === updated._id ? updated : t));
-            setSharedWithMe((prev) => prev.map((t) => t._id === updated._id ? updated : t));
+          editTask={editTask}
+          currentUserId={user?.userId}
+          onCommentAdded={(taskId, text) => {
+            // Fire-and-forget — socket handles state update
+            axios.post(`${API}/api/tasks/${taskId}/comments`, { text }).catch((err) =>
+              alert(err.response?.data?.message || 'Failed to post comment.')
+            );
+          }}
+          onCommentDeleted={(taskId, commentId) => {
+            // Fire-and-forget — socket handles state removal
+            axios.delete(`${API}/api/tasks/${taskId}/comments/${commentId}`).catch((err) =>
+              alert(err.response?.data?.message || 'Failed to delete comment.')
+            );
           }}
         />
       </div>
@@ -449,7 +492,7 @@ const Tasks = () => {
 };
 
 // ── Edit Task Modal ────────────────────────────────────────────────────────────
-const EditTaskModal = ({ task, onSave, onCancel, API, currentUser }) => {
+const EditTaskModal = ({ task, onSave, onCancel, API, currentUser, comments = [], onDeleteComment }) => {
   const getToday = () => new Date().toISOString().split("T")[0];
   const toInputDate = (due) => {
     if (!due) return getToday();
@@ -578,6 +621,40 @@ const EditTaskModal = ({ task, onSave, onCancel, API, currentUser }) => {
                 <p style={{ fontSize: "12px", color: "#888", margin: 0 }}>
                   Or share a link: <button type="button" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/shared/${task._id}`); alert("Link copied!"); }} style={{ background: "none", border: "none", color: "#667eea", cursor: "pointer", fontSize: "12px", textDecoration: "underline", padding: 0 }}>Copy invite link 🔗</button>
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Comments section — owner can delete any comment, no editing allowed */}
+          {comments.length > 0 && (
+            <div style={{ marginBottom: "16px" }}>
+              <p style={{ fontSize: "13px", fontWeight: "600", color: "#555", marginBottom: "8px" }}>
+                Comments ({comments.length})
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "200px", overflowY: "auto" }}>
+                {comments.map((c) => (
+                  <div key={c._id} style={{ background: "#f7f7fb", borderRadius: "8px", padding: "8px 12px", position: "relative" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
+                      <span style={{ fontWeight: "600", fontSize: "12px", color: "#444" }}>
+                        {c.name}
+                        {c.userId?.toString() === currentUser?.userId?.toString() && (
+                          <span style={{ marginLeft: "5px", fontSize: "10px", background: "#667eea", color: "#fff", padding: "1px 5px", borderRadius: "8px" }}>you</span>
+                        )}
+                      </span>
+                      <span style={{ fontSize: "11px", color: "#aaa" }}>
+                        {new Date(c.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#333", whiteSpace: "pre-wrap" }}>{c.text}</p>
+                    {/* Owner can delete any comment — no edit allowed */}
+                    <button
+                      type="button"
+                      onClick={() => { if (window.confirm("Delete this comment?")) onDeleteComment(c._id); }}
+                      style={{ position: "absolute", top: "6px", right: "8px", background: "none", border: "none", color: "#ccc", cursor: "pointer", fontSize: "15px", lineHeight: 1 }}
+                      title="Delete comment"
+                    >×</button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
