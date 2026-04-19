@@ -8,7 +8,6 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import User from './models/User.js';
 import Task from './models/Task.js';
-import SharedTask from './models/SharedTask.js';
 
 dotenv.config();
 
@@ -63,10 +62,6 @@ function requireAuth(req, res, next) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function isSharedMember(task, userId) {
-  const id = userId.toString();
-  return task.owner.userId.toString() === id || task.members.some((m) => m.userId.toString() === id);
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // AUTH
@@ -83,7 +78,7 @@ app.post('/api/auth/signup', async (req, res) => {
     const user = await User.create({ name, email: email.toLowerCase(), password: hashedPassword });
     req.session.userId = user._id;
     req.session.userName = user.name;
-    return res.status(201).json({ message: 'Account created.', user: { name: user.name, email: user.email, reminderDays: user.reminderDays, myName: user.myName, darkMode: user.darkMode, sortBy: user.sortBy } });
+    return res.status(201).json({ message: 'Account created.', user: { userId: user._id, name: user.name, email: user.email, reminderDays: user.reminderDays, myName: user.myName, darkMode: user.darkMode, sortBy: user.sortBy } });
   } catch (err) {
     return res.status(500).json({ message: 'Server error during signup.' });
   }
@@ -99,7 +94,7 @@ app.post('/api/auth/signin', async (req, res) => {
     if (!isMatch) return res.status(401).json({ message: 'Invalid email or password.' });
     req.session.userId = user._id;
     req.session.userName = user.name;
-    return res.json({ message: 'Signed in.', user: { name: user.name, email: user.email, reminderDays: user.reminderDays, myName: user.myName, darkMode: user.darkMode, sortBy: user.sortBy } });
+    return res.json({ message: 'Signed in.', user: { userId: user._id, name: user.name, email: user.email, reminderDays: user.reminderDays, myName: user.myName, darkMode: user.darkMode, sortBy: user.sortBy } });
   } catch (err) {
     return res.status(500).json({ message: 'Server error during signin.' });
   }
@@ -164,7 +159,7 @@ app.patch('/api/profile', requireAuth, async (req, res) => {
     if (sortBy !== undefined) user.sortBy = sortBy;
     await user.save();
     req.session.userName = user.name;
-    return res.json({ message: 'Profile updated.', user: { name: user.name, email: user.email, reminderDays: user.reminderDays, myName: user.myName, darkMode: user.darkMode, sortBy: user.sortBy } });
+    return res.json({ message: 'Profile updated.', user: { userId: user._id, name: user.name, email: user.email, reminderDays: user.reminderDays, myName: user.myName, darkMode: user.darkMode, sortBy: user.sortBy } });
   } catch (err) {
     return res.status(500).json({ message: 'Server error.' });
   }
@@ -179,7 +174,6 @@ app.get('/api/users/search', requireAuth, async (req, res) => {
     const q = (req.query.q || '').trim();
     if (q.length < 2) return res.json([]);
     const users = await User.find({
-      _id: { $ne: req.session.userId },
       $or: [{ name: { $regex: q, $options: 'i' } }, { email: { $regex: q, $options: 'i' } }],
     }).select('name email').limit(8);
     return res.json(users);
@@ -210,7 +204,18 @@ app.get('/api/tasks/shared-with-me', requireAuth, async (req, res) => {
       isShared: true,
       'sharedWith.userId': req.session.userId,
     }).sort({ createdAt: -1 });
-    return res.json(tasks);
+
+    // Attach the owner name to each task so the frontend can display "Shared by X"
+    const ownerIds = [...new Set(tasks.map((t) => t.userId.toString()))];
+    const owners = await User.find({ _id: { $in: ownerIds } }).select('name');
+    const ownerMap = Object.fromEntries(owners.map((u) => [u._id.toString(), u.name]));
+
+    const tasksWithOwner = tasks.map((t) => ({
+      ...t.toObject(),
+      ownerName: ownerMap[t.userId.toString()] || 'Someone',
+    }));
+
+    return res.json(tasksWithOwner);
   } catch (err) {
     return res.status(500).json({ message: 'Server error.' });
   }
@@ -220,15 +225,24 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
   try {
     const { title, description, due, priority, category, assignedTo, isShared, sharedWith } = req.body;
     if (!title) return res.status(400).json({ message: 'Title is required.' });
+
+    // Resolve assignedTo — default to the creator if not provided
+    const creator = await User.findById(req.session.userId).select('name email');
+    const resolvedAssignedTo = (assignedTo && typeof assignedTo === 'object' && assignedTo.userId)
+      ? assignedTo
+      : { userId: creator._id, name: creator.name, email: creator.email };
+
     const count = await Task.countDocuments({ userId: req.session.userId });
     const task = await Task.create({
       userId: req.session.userId,
+      creatorName: creator.name,
+      creatorEmail: creator.email,
       title,
       description: description || '',
       due: due || '',
       priority: priority || 'low',
       category: category || '',
-      assignedTo: (assignedTo && typeof assignedTo === 'object' && assignedTo.userId) ? assignedTo : null,
+      assignedTo: resolvedAssignedTo,
       isShared: isShared || false,
       sharedWith: sharedWith || [],
       completed: false,
@@ -236,9 +250,10 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
     });
     // Notify creator
     emitToUser(req.session.userId, 'task:created', task);
-    // Notify each person it's shared with
+    // Notify each person it's shared with — include ownerName for display
     if (task.isShared && task.sharedWith.length > 0) {
-      task.sharedWith.forEach((u) => emitToUser(u.userId, 'task:shared-with-me', task));
+      const taskWithOwner = { ...task.toObject(), ownerName: creator.name };
+      task.sharedWith.forEach((u) => emitToUser(u.userId, 'task:shared-with-me', taskWithOwner));
     }
     return res.status(201).json(task);
   } catch (err) {
@@ -259,23 +274,31 @@ app.patch('/api/tasks/:id', requireAuth, async (req, res) => {
     });
     if (!task) return res.status(404).json({ message: 'Task not found.' });
 
-    const allowed = ['title', 'description', 'due', 'priority', 'category', 'completed', 'order', 'isShared', 'sharedWith', 'notes'];
-    allowed.forEach((field) => { if (req.body[field] !== undefined) task[field] = req.body[field]; });
+    const isOwner = task.userId.toString() === req.session.userId.toString();
 
-    // Sanitize assignedTo separately — must be a proper object or null, never a string
-    if (req.body.assignedTo !== undefined) {
-      const at = req.body.assignedTo;
-      task.assignedTo = (at && typeof at === 'object' && at.userId) ? at : null;
+    if (isOwner) {
+      // Owner can edit everything
+      const allowed = ['title', 'description', 'due', 'priority', 'category', 'completed', 'order', 'isShared', 'sharedWith', 'notes'];
+      allowed.forEach((field) => { if (req.body[field] !== undefined) task[field] = req.body[field]; });
+      if (req.body.assignedTo !== undefined) {
+        const at = req.body.assignedTo;
+        task.assignedTo = (at && typeof at === 'object' && at.userId) ? at : null;
+      }
+    } else {
+      // Shared member — can only toggle completed
+      if (req.body.completed !== undefined) task.completed = req.body.completed;
     }
     await task.save();
 
     // Notify owner
     emitToUser(task.userId, 'task:updated', task);
-    // Notify all shared-with users
+    // Notify all shared-with users (include ownerName so UI can display "Shared by X")
     if (task.isShared && task.sharedWith.length > 0) {
+      const ownerUser = await User.findById(task.userId).select('name').catch(() => null);
+      const taskWithOwner = { ...task.toObject(), ownerName: ownerUser?.name || 'Someone' };
       task.sharedWith.forEach((u) => {
         if (u.userId.toString() !== task.userId.toString()) {
-          emitToUser(u.userId, 'task:updated', task);
+          emitToUser(u.userId, 'task:updated', taskWithOwner);
         }
       });
     }
@@ -339,161 +362,73 @@ app.get('/api/tasks/join/:id', requireAuth, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// SHARED TASK ROUTES (legacy SharedTask collection — kept for backward compat)
+// TASK COMMENTS (for isShared personal tasks)
 // ═══════════════════════════════════════════════════════════════════
 
-function isMember(task, userId) {
+// Helper: is this user allowed to interact with comments on this task?
+function canComment(task, userId) {
   const id = userId.toString();
-  return task.owner.userId.toString() === id || task.members.some((m) => m.userId.toString() === id);
+  // Owner can always comment; sharedWith members can comment on shared tasks
+  if (task.userId.toString() === id) return true;
+  if (task.isShared && task.sharedWith.some((u) => u.userId.toString() === id)) return true;
+  return false;
 }
 
-app.get('/api/shared-tasks', requireAuth, async (req, res) => {
+// POST a comment
+app.post('/api/tasks/:id/comments', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.userId;
-    const tasks = await SharedTask.find({ $or: [{ 'owner.userId': userId }, { 'members.userId': userId }] }).sort({ createdAt: -1 });
-    return res.json(tasks);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error.' });
-  }
-});
-
-app.get('/api/shared-tasks/:id', requireAuth, async (req, res) => {
-  try {
-    const task = await SharedTask.findById(req.params.id);
+    const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found.' });
-    const userId = req.session.userId;
-    const user = await User.findById(userId).select('name email');
-    if (!isMember(task, userId)) {
-      task.members.push({ userId: user._id, name: user.name, email: user.email });
-      await task.save();
-      const allUserIds = [task.owner.userId, ...task.members.map((m) => m.userId)];
-      allUserIds.forEach((uid) => emitToUser(uid, 'shared-task:updated', task));
-    }
-    return res.json(task);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error.' });
-  }
-});
-
-app.post('/api/shared-tasks', requireAuth, async (req, res) => {
-  try {
-    const { title, description, due, priority, category, memberIds } = req.body;
-    if (!title) return res.status(400).json({ message: 'Title is required.' });
-    const owner = await User.findById(req.session.userId).select('name email');
-    let members = [];
-    if (Array.isArray(memberIds) && memberIds.length > 0) {
-      const found = await User.find({ _id: { $in: memberIds } }).select('name email');
-      members = found.map((u) => ({ userId: u._id, name: u.name, email: u.email }));
-    }
-    const task = await SharedTask.create({ title, description: description || '', due: due || '', priority: priority || 'low', category: category || '', owner: { userId: owner._id, name: owner.name, email: owner.email }, members });
-    members.forEach((m) => emitToUser(m.userId, 'shared-task:created', task));
-    return res.status(201).json(task);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error.' });
-  }
-});
-
-app.patch('/api/shared-tasks/:id', requireAuth, async (req, res) => {
-  try {
-    const task = await SharedTask.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: 'Task not found.' });
-    if (!isMember(task, req.session.userId)) return res.status(403).json({ message: 'Not a member.' });
-    const allowed = ['title', 'description', 'due', 'priority', 'category', 'completed'];
-    allowed.forEach((f) => { if (req.body[f] !== undefined) task[f] = req.body[f]; });
-    await task.save();
-    const allUserIds = [task.owner.userId, ...task.members.map((m) => m.userId)];
-    allUserIds.forEach((uid) => emitToUser(uid, 'shared-task:updated', task));
-    return res.json(task);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error.' });
-  }
-});
-
-app.delete('/api/shared-tasks/:id', requireAuth, async (req, res) => {
-  try {
-    const task = await SharedTask.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: 'Task not found.' });
-    if (task.owner.userId.toString() !== req.session.userId.toString()) return res.status(403).json({ message: 'Only the owner can delete.' });
-    const allUserIds = [task.owner.userId, ...task.members.map((m) => m.userId)];
-    await task.deleteOne();
-    allUserIds.forEach((uid) => emitToUser(uid, 'shared-task:deleted', { _id: req.params.id }));
-    return res.json({ message: 'Deleted.' });
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error.' });
-  }
-});
-
-app.post('/api/shared-tasks/:id/members', requireAuth, async (req, res) => {
-  try {
-    const task = await SharedTask.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: 'Task not found.' });
-    if (!isMember(task, req.session.userId)) return res.status(403).json({ message: 'Not a member.' });
-    const { userId } = req.body;
-    const alreadyIn = task.owner.userId.toString() === userId || task.members.some((m) => m.userId.toString() === userId);
-    if (alreadyIn) return res.status(409).json({ message: 'User is already a member.' });
-    const newMember = await User.findById(userId).select('name email');
-    if (!newMember) return res.status(404).json({ message: 'User not found.' });
-    task.members.push({ userId: newMember._id, name: newMember.name, email: newMember.email });
-    await task.save();
-    const allUserIds = [task.owner.userId, ...task.members.map((m) => m.userId)];
-    allUserIds.forEach((uid) => emitToUser(uid, 'shared-task:updated', task));
-    emitToUser(newMember._id, 'shared-task:created', task);
-    return res.json(task);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error.' });
-  }
-});
-
-app.delete('/api/shared-tasks/:id/members/:memberId', requireAuth, async (req, res) => {
-  try {
-    const task = await SharedTask.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: 'Task not found.' });
-    const requesterId = req.session.userId.toString();
-    const isOwner = task.owner.userId.toString() === requesterId;
-    const isSelf = requesterId === req.params.memberId;
-    if (!isOwner && !isSelf) return res.status(403).json({ message: 'Not allowed.' });
-    task.members = task.members.filter((m) => m.userId.toString() !== req.params.memberId);
-    await task.save();
-    const allUserIds = [task.owner.userId, ...task.members.map((m) => m.userId)];
-    allUserIds.forEach((uid) => emitToUser(uid, 'shared-task:updated', task));
-    emitToUser(req.params.memberId, 'shared-task:removed', { _id: task._id });
-    return res.json(task);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error.' });
-  }
-});
-
-app.post('/api/shared-tasks/:id/comments', requireAuth, async (req, res) => {
-  try {
-    const task = await SharedTask.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: 'Task not found.' });
-    if (!isMember(task, req.session.userId)) return res.status(403).json({ message: 'Not a member.' });
+    if (!canComment(task, req.session.userId))
+      return res.status(403).json({ message: 'Not allowed to comment on this task.' });
     const { text } = req.body;
     if (!text?.trim()) return res.status(400).json({ message: 'Comment cannot be empty.' });
     const user = await User.findById(req.session.userId).select('name');
     task.comments.push({ userId: req.session.userId, name: user.name, text: text.trim() });
     await task.save();
     const newComment = task.comments[task.comments.length - 1];
-    const allUserIds = [task.owner.userId, ...task.members.map((m) => m.userId)];
-    allUserIds.forEach((uid) => emitToUser(uid, 'shared-task:comment', { taskId: task._id, comment: newComment }));
+    // Notify owner + all sharedWith members + commenter (deduplicated)
+    const involvedIds = [task.userId, ...task.sharedWith.map((u) => u.userId), req.session.userId];
+    const seen = new Set();
+    const notifyIds = involvedIds.filter((uid) => {
+      const key = uid.toString();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    notifyIds.forEach((uid) =>
+      emitToUser(uid, 'task:comment', { taskId: task._id.toString(), comment: newComment })
+    );
     return res.status(201).json(newComment);
   } catch (err) {
+    console.error('Add comment error:', err);
     return res.status(500).json({ message: 'Server error.' });
   }
 });
 
-app.delete('/api/shared-tasks/:id/comments/:commentId', requireAuth, async (req, res) => {
+// DELETE a comment — only the comment author can delete (owner cannot delete others' comments per spec)
+app.delete('/api/tasks/:id/comments/:commentId', requireAuth, async (req, res) => {
   try {
-    const task = await SharedTask.findById(req.params.id);
+    const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found.' });
     const comment = task.comments.id(req.params.commentId);
     if (!comment) return res.status(404).json({ message: 'Comment not found.' });
-    const requesterId = req.session.userId.toString();
-    if (task.owner.userId.toString() !== requesterId && comment.userId.toString() !== requesterId) return res.status(403).json({ message: 'Not allowed.' });
+    // Spec: comments cannot be deleted by shared members (others); only by the comment author
+    if (comment.userId.toString() !== req.session.userId.toString())
+      return res.status(403).json({ message: 'You can only delete your own comments.' });
     comment.deleteOne();
     await task.save();
-    const allUserIds = [task.owner.userId, ...task.members.map((m) => m.userId)];
-    allUserIds.forEach((uid) => emitToUser(uid, 'shared-task:comment-deleted', { taskId: task._id, commentId: req.params.commentId }));
+    const involvedIds2 = [task.userId, ...task.sharedWith.map((u) => u.userId), req.session.userId];
+    const seen2 = new Set();
+    const notifyIds = involvedIds2.filter((uid) => {
+      const key = uid.toString();
+      if (seen2.has(key)) return false;
+      seen2.add(key);
+      return true;
+    });
+    notifyIds.forEach((uid) =>
+      emitToUser(uid, 'task:comment-deleted', { taskId: task._id.toString(), commentId: req.params.commentId })
+    );
     return res.json({ message: 'Comment deleted.' });
   } catch (err) {
     return res.status(500).json({ message: 'Server error.' });

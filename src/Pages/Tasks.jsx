@@ -68,6 +68,27 @@ const Tasks = () => {
     socket.on("task:shared-with-me", (task) => {
       setSharedWithMe((prev) => prev.find((t) => t._id === task._id) ? prev : [task, ...prev]);
     });
+    socket.on("task:comment", ({ taskId, comment }) => {
+      // Deduplicated: skip if comment._id already exists (prevents double-add)
+      const addComment = (list) =>
+        list.map((t) => {
+          if (t._id.toString() !== taskId.toString()) return t;
+          const exists = (t.comments || []).some((c) => c._id === comment._id);
+          return exists ? t : { ...t, comments: [...(t.comments || []), comment] };
+        });
+      setTodos((prev) => addComment(prev));
+      setSharedWithMe((prev) => addComment(prev));
+    });
+    socket.on("task:comment-deleted", ({ taskId, commentId }) => {
+      const removeComment = (list) =>
+        list.map((t) =>
+          t._id.toString() !== taskId.toString()
+            ? t
+            : { ...t, comments: (t.comments || []).filter((c) => c._id !== commentId) }
+        );
+      setTodos((prev) => removeComment(prev));
+      setSharedWithMe((prev) => removeComment(prev));
+    });
 
     return () => socket.disconnect();
   }, [API]);
@@ -252,13 +273,22 @@ const Tasks = () => {
 
   if (loading) return <div style={{ padding: "32px", textAlign: "center" }}>Loading tasks…</div>;
 
-  const filteredTodos = getSortedTodos().filter((todo) =>
+  // Merge own + shared-with-me (active only). Mark shared ones with _sharedWithMe flag.
+  const filteredOwn = getSortedTodos().filter((todo) =>
     !todo.completed &&
     (todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
      (todo.description || "").toLowerCase().includes(searchQuery.toLowerCase())) &&
     (filterPriority === "all" || todo.priority === filterPriority) &&
     (filterCategory === "all" || todo.category === filterCategory)
   );
+  const filteredShared = sharedWithMe.filter((todo) =>
+    !todo.completed &&
+    (todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     (todo.description || "").toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (filterPriority === "all" || todo.priority === filterPriority) &&
+    (filterCategory === "all" || todo.category === filterCategory)
+  ).map((t) => ({ ...t, _sharedWithMe: true }));
+  const filteredTodos = [...filteredOwn, ...filteredShared];
 
   return (
     <div>
@@ -266,7 +296,7 @@ const Tasks = () => {
 
       {/* Edit modal */}
       {editingTask && (
-        <EditTaskModal task={editingTask} onSave={saveEditedTask} onCancel={() => setEditingTask(null)} API={API} />
+        <EditTaskModal task={editingTask} onSave={saveEditedTask} onCancel={() => setEditingTask(null)} API={API} currentUser={user} />
       )}
 
       {/* Reminder selector */}
@@ -382,61 +412,20 @@ const Tasks = () => {
           reorderTodos={reorderTodos}
         />
         <CompletedTodos
-          todos={todos}
+          todos={[...todos, ...sharedWithMe.map((t) => ({ ...t, _sharedWithMe: true }))]}
           toggleCompleted={toggleCompleted}
-          onTaskUpdated={(updated) => setTodos((prev) => prev.map((t) => t._id === updated._id ? updated : t))}
+          onTaskUpdated={(updated) => {
+            setTodos((prev) => prev.map((t) => t._id === updated._id ? updated : t));
+            setSharedWithMe((prev) => prev.map((t) => t._id === updated._id ? updated : t));
+          }}
         />
-      </div>
-
-      {/* Shared With Me section */}
-      {sharedWithMe.length > 0 && (
-        <div style={{ marginTop: "32px" }}>
-          <h2 style={{ fontSize: "20px", marginBottom: "12px" }}>🔗 Shared With Me</h2>
-          {sharedWithMe.filter((t) => !t.completed).map((todo) => (
-            <SharedTaskRow key={todo._id} todo={todo} toggleCompleted={toggleCompleted} editTask={editTask} API={API} />
-          ))}
-          {sharedWithMe.filter((t) => t.completed).length > 0 && (
-            <details style={{ marginTop: "12px" }}>
-              <summary style={{ cursor: "pointer", color: "#888", fontSize: "14px" }}>Completed shared tasks ({sharedWithMe.filter((t) => t.completed).length})</summary>
-              {sharedWithMe.filter((t) => t.completed).map((todo) => (
-                <SharedTaskRow key={todo._id} todo={todo} toggleCompleted={toggleCompleted} editTask={editTask} API={API} />
-              ))}
-            </details>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ── Shared-with-me task row ────────────────────────────────────────────────────
-const SharedTaskRow = ({ todo, toggleCompleted, editTask }) => {
-  const priorityColor = { high: "#dc3545", medium: "#fd7e14", low: "#28a745" };
-  return (
-    <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderLeft: `4px solid ${priorityColor[todo.priority] || "#ccc"}`, borderRadius: "8px", padding: "14px 16px", marginBottom: "10px", opacity: todo.completed ? 0.7 : 1 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: "15px", textDecoration: todo.completed ? "line-through" : "none" }}>{todo.title}</h3>
-          <div style={{ fontSize: "12px", color: "#888", marginTop: "3px" }}>
-            Shared by <strong>{todo.userId?.name || "someone"}</strong>
-            {todo.due && <> · Due {todo.due}</>}
-            {todo.assignedTo?.name && <> · Assigned to <strong>{todo.assignedTo.name}</strong></>}
-          </div>
-          {todo.description && <p style={{ margin: "8px 0 0", fontSize: "13px", color: "#444" }}>{todo.description}</p>}
-        </div>
-        <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-          <button onClick={() => toggleCompleted(todo)} style={{ padding: "4px 10px", fontSize: "12px", borderRadius: "4px", border: "1px solid #28a745", color: "#28a745", background: "none", cursor: "pointer" }}>
-            {todo.completed ? "Reopen" : "Complete"}
-          </button>
-          <button onClick={() => editTask(todo)} style={{ padding: "4px 10px", fontSize: "12px", borderRadius: "4px", border: "1px solid #667eea", color: "#667eea", background: "none", cursor: "pointer" }}>Edit</button>
-        </div>
       </div>
     </div>
   );
 };
 
 // ── Edit Task Modal ────────────────────────────────────────────────────────────
-const EditTaskModal = ({ task, onSave, onCancel, API }) => {
+const EditTaskModal = ({ task, onSave, onCancel, API, currentUser }) => {
   const getToday = () => new Date().toISOString().split("T")[0];
   const toInputDate = (due) => {
     if (!due) return getToday();
@@ -455,7 +444,9 @@ const EditTaskModal = ({ task, onSave, onCancel, API }) => {
     category: task.category || "",
   });
   const [assignedTo, setAssignedTo] = useState(
-    task.assignedTo?.userId ? { _id: task.assignedTo.userId, name: task.assignedTo.name, email: task.assignedTo.email } : null
+    task.assignedTo?.userId
+      ? { _id: task.assignedTo.userId, name: task.assignedTo.name, email: task.assignedTo.email }
+      : currentUser ? { _id: currentUser.userId, name: currentUser.name, email: currentUser.email } : null
   );
   const [isShared, setIsShared] = useState(task.isShared || false);
   const [sharedWith, setSharedWith] = useState(

@@ -1,18 +1,23 @@
 import React, { useState } from "react";
 import validation from "../utils/validation";
 import MemberSearch from "./MemberSearch";
+import { useAuth } from "../context/AuthContext";
 
 const AddTodo = ({ addTodo }) => {
+  const { user } = useAuth();
   const getToday = () => new Date().toISOString().split("T")[0];
+
+  // Default assignedTo = logged-in user
+  const selfUser = user ? { _id: user.userId, name: user.name, email: user.email } : null;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [due, setDue] = useState(getToday());
   const [priority, setPriority] = useState("low");
   const [category, setCategory] = useState("");
-  const [assignedTo, setAssignedTo] = useState(null);      // { _id, name, email }
+  const [assignedTo, setAssignedTo] = useState(selfUser);
   const [isShared, setIsShared] = useState(false);
-  const [sharedWith, setSharedWith] = useState([]);         // [{ _id, name, email }]
+  const [sharedWith, setSharedWith] = useState([]);
   const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
@@ -32,23 +37,23 @@ const AddTodo = ({ addTodo }) => {
       const dueDate = new Date(y, m - 1, d); dueDate.setHours(0, 0, 0, 0);
       if (dueDate < today) throw new Error("Due date must be today or in the future.");
 
-      const newTodo = {
+      addTodo({
         title: validatedTitle,
         description: validatedDescription,
         due: validatedDate,
         priority,
         category,
+        // Send null if no assignedTo so server defaults to creator
         assignedTo: assignedTo ? { userId: assignedTo._id, name: assignedTo.name, email: assignedTo.email } : null,
         isShared,
         sharedWith: sharedWith.map((u) => ({ userId: u._id, name: u.name, email: u.email })),
         completed: false,
-      };
-      addTodo(newTodo);
+      });
 
-      // Reset
+      // Reset — re-default assignedTo to self
       setTitle(""); setDescription(""); setDue(getToday());
       setPriority("low"); setCategory("");
-      setAssignedTo(null); setIsShared(false); setSharedWith([]); setError("");
+      setAssignedTo(selfUser); setIsShared(false); setSharedWith([]); setError("");
     } catch (err) {
       setError(err.message);
     }
@@ -59,6 +64,13 @@ const AddTodo = ({ addTodo }) => {
   const labelStyle = { display: "block", fontWeight: "600", fontSize: "13px", marginBottom: "4px", color: "#444" };
   const inputStyle = { width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "14px", boxSizing: "border-box" };
   const fieldStyle = { marginBottom: "12px" };
+
+  const AssignedChip = ({ u, onClear }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "7px 10px", background: "#e8e8ff", borderRadius: "6px", fontSize: "14px" }}>
+      <span>👤 <strong>{u.name}</strong>{u._id === selfUser?._id && <span style={{ fontSize: "11px", color: "#667eea", marginLeft: "4px" }}>(you)</span>} <span style={{ color: "#888", fontSize: "12px" }}>{u.email}</span></span>
+      <button type="button" onClick={onClear} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#888", fontSize: "16px" }}>×</button>
+    </div>
+  );
 
   return (
     <div style={{ background: "#f7f7fb", border: "1px solid #e0e0e0", borderRadius: "10px", padding: "20px", marginBottom: "24px" }}>
@@ -99,49 +111,38 @@ const AddTodo = ({ addTodo }) => {
           </div>
         </div>
 
-        {/* Assign To — registered user search */}
+        {/* Assign To — defaults to self, searchable */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Assign To (optional)</label>
+          <label style={labelStyle}>Assign To <span style={{ fontWeight: "400", color: "#888" }}>(defaults to you)</span></label>
           {assignedTo ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "7px 10px", background: "#e8e8ff", borderRadius: "6px", fontSize: "14px" }}>
-              <span>👤 <strong>{assignedTo.name}</strong> <span style={{ color: "#888", fontSize: "12px" }}>{assignedTo.email}</span></span>
-              <button type="button" onClick={() => setAssignedTo(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#888", fontSize: "16px" }}>×</button>
-            </div>
+            <AssignedChip u={assignedTo} onClear={() => setAssignedTo(null)} />
           ) : (
-            <MemberSearch
-              onAdd={(u) => setAssignedTo(u)}
-              excludeIds={assignedTo ? [assignedTo._id] : []}
-            />
+            <MemberSearch onAdd={(u) => setAssignedTo(u)} excludeIds={[]} />
           )}
         </div>
 
         {/* Share toggle */}
         <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: "10px" }}>
           <input
-            type="checkbox"
-            id="isShared"
-            checked={isShared}
+            type="checkbox" id="isShared" checked={isShared}
             onChange={(e) => { setIsShared(e.target.checked); if (!e.target.checked) setSharedWith([]); }}
             style={{ width: "16px", height: "16px", cursor: "pointer" }}
           />
           <label htmlFor="isShared" style={{ ...labelStyle, marginBottom: 0, cursor: "pointer" }}>Share this task with others</label>
         </div>
 
-        {/* Shared with — only shown when isShared is checked */}
         {isShared && (
           <div style={{ ...fieldStyle, background: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", padding: "12px" }}>
-            <label style={labelStyle}>Share With (search registered users)</label>
+            <label style={labelStyle}>Share With</label>
             <MemberSearch
-              onAdd={(u) => {
-                if (!sharedWith.find((s) => s._id === u._id)) setSharedWith((prev) => [...prev, u]);
-              }}
+              onAdd={(u) => { if (!sharedWith.find((s) => s._id === u._id)) setSharedWith((prev) => [...prev, u]); }}
               excludeIds={sharedWith.map((u) => u._id)}
             />
             {sharedWith.length > 0 && (
               <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
                 {sharedWith.map((u) => (
                   <span key={u._id} style={{ background: "#e8e8ff", padding: "4px 10px", borderRadius: "20px", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    {u.name}
+                    {u.name}{u._id === selfUser?._id && <span style={{ fontSize: "10px", color: "#667eea" }}>(you)</span>}
                     <button type="button" onClick={() => removeSharedUser(u._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#888", fontSize: "15px", padding: 0, lineHeight: 1 }}>×</button>
                   </span>
                 ))}

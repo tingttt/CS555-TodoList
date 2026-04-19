@@ -12,6 +12,16 @@ const sharedWithSchema = new mongoose.Schema({
   email:  { type: String, required: true },
 }, { _id: false });
 
+// Comments on shared personal tasks (tasks with isShared: true)
+const commentSchema = new mongoose.Schema(
+  {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    name:   { type: String, required: true },
+    text:   { type: String, required: true, trim: true },
+  },
+  { timestamps: true }
+);
+
 const taskSchema = new mongoose.Schema(
   {
     userId: {
@@ -20,6 +30,10 @@ const taskSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // Denormalized creator info — stored once at creation for fast display
+    creatorName:  { type: String, default: '' },
+    creatorEmail: { type: String, default: '' },
+
     title:       { type: String, required: true, trim: true },
     description: { type: String, default: '', trim: true },
     due:         { type: String, default: '' },   // stored as "mm/dd/yyyy"
@@ -32,6 +46,9 @@ const taskSchema = new mongoose.Schema(
     // Sharing
     isShared:   { type: Boolean, default: false },
     sharedWith: { type: [sharedWithSchema], default: [] },
+
+    // Comments — populated when isShared is true; members & owner can comment
+    comments: { type: [commentSchema], default: [] },
 
     notes:     { type: String, default: '' },
     completed: { type: Boolean, default: false },

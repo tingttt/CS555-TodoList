@@ -71,21 +71,45 @@ const CompletedTodos = ({ todos, toggleCompleted, onTaskUpdated }) => {
   return (
     <div className="completedTodos">
       <h2>Completed Todos</h2>
-      {completedTodos.map((todo) => (
-        <div key={todo._id} className="todo todo--completed" style={{ opacity: 0.8 }}>
-          <h1 style={{ textDecoration: 'line-through' }}>{todo.title}</h1>
-          {todo.description && <p>{todo.description}</p>}
-          {todo.due && <p>Due: {todo.due}</p>}
-          {todo.priority && <p>Priority: {todo.priority}</p>}
-          {todo.category && <p>Category: {todo.category}</p>}
-          {todo.assignedTo?.name && (
-            <p>Assigned To: <strong>{todo.assignedTo.name}</strong> <span style={{ fontSize: '12px', color: '#888' }}>({todo.assignedTo.email})</span></p>
-          )}
-          <p>Completed: Yes ✅</p>
-          <button onClick={() => toggleCompleted(todo)}>Uncomplete</button>
-          <NoteField todo={todo} onSaved={onTaskUpdated} />
-        </div>
-      ))}
+      {completedTodos.map((todo) => {
+        const isSharedWithMe = !!todo._sharedWithMe;
+        return (
+          <div
+            key={todo._id}
+            className="todo todo--completed"
+            style={{
+              opacity: 0.8,
+              background: isSharedWithMe ? '#f0fafa' : undefined,
+              borderLeft: isSharedWithMe ? '4px solid #20c997' : undefined,
+              position: 'relative',
+            }}
+          >
+            {isSharedWithMe && (
+              <span style={{
+                position: 'absolute', top: '10px', right: '10px',
+                background: '#20c997', color: '#fff',
+                fontSize: '10px', fontWeight: '700', letterSpacing: '0.5px',
+                padding: '2px 7px', borderRadius: '10px', textTransform: 'uppercase',
+              }}>Shared</span>
+            )}
+            <h1 style={{ textDecoration: 'line-through' }}>{todo.title}</h1>
+            {isSharedWithMe && todo.ownerName && (
+              <p style={{ fontSize: '12px', color: '#20c997', fontWeight: '600', margin: '0 0 6px' }}>Shared by {todo.ownerName}</p>
+            )}
+            {todo.description && <p>{todo.description}</p>}
+            {todo.due && <p>Due: {todo.due}</p>}
+            {todo.priority && <p>Priority: {todo.priority}</p>}
+            {todo.category && <p>Category: {todo.category}</p>}
+            {todo.assignedTo?.name && (
+              <p>Assigned To: <strong>{todo.assignedTo.name}</strong> <span style={{ fontSize: '12px', color: '#888' }}>({todo.assignedTo.email})</span></p>
+            )}
+            <p>Completed: Yes ✅</p>
+            <button onClick={() => toggleCompleted(todo)}>Uncomplete</button>
+            {/* Notes only on own tasks */}
+            {!isSharedWithMe && <NoteField todo={todo} onSaved={onTaskUpdated} />}
+          </div>
+        );
+      })}
     </div>
   );
 };

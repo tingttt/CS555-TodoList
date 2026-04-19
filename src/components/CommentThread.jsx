@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function CommentThread({ taskId, comments = [], onAdd, onDelete }) {
+/**
+ * CommentThread — used on all tasks (personal and shared).
+ *
+ * Props:
+ *   taskId        — the task's _id
+ *   comments      — array of comment objects
+ *   taskOwnerId   — userId of the task's owner
+ *   onAdd(text)   — async callback to post a comment
+ *   onDelete(id)  — async callback to delete a comment
+ *   // ownerCanDelete: if true, task owner can delete any comment (SharedTask behaviour)
+ *   //                 if false/omitted, only comment author can delete (personal task spec)
+ *   ownerCanDelete — boolean, default false
+ */
+export default function CommentThread({ taskId, comments = [], taskOwnerId, onAdd, onDelete, ownerCanDelete = false }) {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const myId = user?.userId?.toString();
+  const ownerId = taskOwnerId?.toString();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -13,6 +29,13 @@ export default function CommentThread({ taskId, comments = [], onAdd, onDelete }
     await onAdd(text.trim());
     setText('');
     setSubmitting(false);
+  };
+
+  const canDelete = (comment) => {
+    const commentAuthor = comment.userId?.toString();
+    if (myId === commentAuthor) return true;           // always own comment
+    if (ownerCanDelete && myId === ownerId) return true; // owner override flag
+    return false;
   };
 
   const formatTime = (iso) => {
@@ -29,16 +52,25 @@ export default function CommentThread({ taskId, comments = [], onAdd, onDelete }
         {comments.map((c) => (
           <div key={c._id} style={{ background: '#f7f7fb', borderRadius: '8px', padding: '8px 12px', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <span style={{ fontWeight: '600', fontSize: '13px' }}>{c.name}</span>
+              <span style={{ fontWeight: '600', fontSize: '13px' }}>
+                {c.name}
+                {c.userId?.toString() === ownerId && (
+                  <span style={{ marginLeft: '6px', fontSize: '10px', background: '#667eea', color: '#fff', padding: '1px 5px', borderRadius: '8px' }}>
+                    owner
+                  </span>
+                )}
+              </span>
               <span style={{ fontSize: '11px', color: '#aaa' }}>{formatTime(c.createdAt)}</span>
             </div>
             <p style={{ margin: 0, fontSize: '13px', whiteSpace: 'pre-wrap' }}>{c.text}</p>
-            {(c.userId === user?.userId || c.userId?.toString() === user?.userId?.toString()) && (
+            {canDelete(c) && (
               <button
                 onClick={() => onDelete(c._id)}
                 style={{ position: 'absolute', top: '6px', right: '8px', background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}
                 title="Delete comment"
-              >×</button>
+              >
+                ×
+              </button>
             )}
           </div>
         ))}
