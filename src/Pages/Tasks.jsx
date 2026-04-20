@@ -659,25 +659,28 @@ const EditTaskModal = ({ task, onSave, onCancel, API, currentUser, comments = []
                 )}
                 {comments.map((c) => (
                   <div key={c._id} style={{ background: "#f7f7fb", borderRadius: "8px", padding: "8px 12px", position: "relative" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px", gap: "8px" }}>
                       <span style={{ fontWeight: "600", fontSize: "12px", color: "#444" }}>
                         {c.name}
                         {c.userId?.toString() === currentUser?.userId?.toString() && (
                           <span style={{ marginLeft: "5px", fontSize: "10px", background: "#667eea", color: "#fff", padding: "1px 5px", borderRadius: "8px" }}>you</span>
                         )}
                       </span>
-                      <span style={{ fontSize: "11px", color: "#aaa" }}>
-                        {new Date(c.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                        <span style={{ fontSize: "11px", color: "#aaa" }}>
+                          {new Date(c.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteComment(c._id)}
+                          style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#888", fontSize: "16px" }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = "0.6"}
+                          title="Delete comment"
+                        >✕</button>
+                      </div>
                     </div>
                     <p style={{ margin: 0, fontSize: "13px", color: "#333", whiteSpace: "pre-wrap" }}>{c.text}</p>
-                    {/* Owner can delete any comment — no edit allowed */}
-                    <button
-                      type="button"
-                      onClick={() => { if (window.confirm("Delete this comment?")) onDeleteComment(c._id); }}
-                      style={{ position: "absolute", top: "6px", right: "8px", background: "none", border: "none", color: "#ccc", cursor: "pointer", fontSize: "15px", lineHeight: 1 }}
-                      title="Delete comment"
-                    >×</button>
                   </div>
                 ))}
               </div>
